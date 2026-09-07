@@ -6,8 +6,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   // 1. STICKY NAVBAR SCROLL BEHAVIOR
   const header = document.querySelector('.site-header');
-  const navLinks = document.querySelectorAll('.nav-desktop .nav-link, .mobile-nav-links .nav-link');
-  const sections = document.querySelectorAll('section[id]');
 
   function handleScroll() {
     if (window.scrollY > 40) {
@@ -16,27 +14,137 @@ document.addEventListener('DOMContentLoaded', () => {
       header.classList.remove('scrolled');
     }
 
-    // Update active nav link
     const scrollY = window.pageYOffset;
-    sections.forEach(current => {
-      const sectionHeight = current.offsetHeight;
-      const sectionTop = current.offsetTop - 120;
-      const sectionId = current.getAttribute('id');
 
-      if (scrollY > sectionTop && scrollY <= sectionTop + sectionHeight) {
-        navLinks.forEach(link => {
-          if (link.getAttribute('href') === `#${sectionId}`) {
-            link.classList.add('active');
-          } else {
-            link.classList.remove('active');
-          }
-        });
-      }
-    });
+    // Subtle Hero Scroll Parallax (Non-destructive movement)
+    const heroMedia = document.querySelector('.hero-media-showcase');
+    const heroText = document.querySelector('.hero-text');
+    if (heroMedia && scrollY < 900 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      heroMedia.style.transform = `translateY(${scrollY * 0.12}px)`;
+      if (heroText) heroText.style.transform = `translateY(${scrollY * 0.05}px)`;
+    }
   }
 
   window.addEventListener('scroll', handleScroll, { passive: true });
   handleScroll();
+
+  // 1B. MULTI-PAGE ROUTER & CATEGORY FILTERING SYSTEM
+  const pageViews = document.querySelectorAll('.page-view');
+  const allNavLinks = document.querySelectorAll('.nav-desktop a, .mobile-nav-links a');
+
+  const routeViewMap = {
+    '': 'view-home',
+    '#home': 'view-home',
+    '#about': 'view-about',
+    '#categories': 'view-categories',
+    '#occasions': 'view-categories',
+    '#custom-order': 'view-categories',
+    '#gallery': 'view-categories',
+    '#chocolates': 'view-chocolates',
+    '#cakes-bakes': 'view-cakes-bakes',
+    '#contact': 'view-contact'
+  };
+
+  function filterProductCards(sectionId, filterValue) {
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+
+    // Update filter button UI inside section
+    const filterBtns = section.querySelectorAll('.category-filter-bar .filter-btn');
+    filterBtns.forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-filter') === filterValue);
+    });
+
+    // Filter product cards
+    const cards = section.querySelectorAll('.product-card');
+    cards.forEach(card => {
+      const category = card.getAttribute('data-category');
+      if (filterValue === 'all' || category === filterValue) {
+        card.style.display = '';
+        card.style.opacity = '1';
+        card.style.transform = 'scale(1)';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
+
+  function switchView(hash, isInitial = false) {
+    const rawHash = hash || window.location.hash || '';
+    const cleanHash = rawHash.split('?')[0]; // strip query params
+    const targetViewId = routeViewMap[cleanHash] || 'view-home';
+
+    pageViews.forEach(view => {
+      if (view.id === targetViewId) {
+        view.classList.remove('hidden-view');
+        view.classList.add('active-view');
+      } else {
+        view.classList.remove('active-view');
+        view.classList.add('hidden-view');
+      }
+    });
+
+    // Reveal elements in active view
+    document.querySelectorAll('.active-view .reveal-on-scroll').forEach(el => {
+      el.classList.add('revealed');
+    });
+
+    // Update active nav link highlighting
+    allNavLinks.forEach(link => {
+      const href = link.getAttribute('href');
+      if (!href || href.startsWith('login.html')) return;
+
+      if (href === cleanHash || (cleanHash === '' && href === '#home')) {
+        link.classList.add('active');
+      } else {
+        link.classList.remove('active');
+      }
+    });
+
+    // Scroll handling
+    if (!isInitial || cleanHash) {
+      if (['#occasions', '#custom-order', '#gallery', '#how-it-works'].includes(cleanHash)) {
+        const targetElem = document.querySelector(cleanHash);
+        if (targetElem) {
+          targetElem.scrollIntoView({ behavior: 'smooth' });
+          return;
+        }
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  // Listen to hash changes & link clicks
+  window.addEventListener('hashchange', () => switchView(window.location.hash));
+
+  // Category Filter Bar & Sublink Click Handlers
+  document.addEventListener('click', (e) => {
+    // Filter button inside section
+    const filterBtn = e.target.closest('.filter-btn');
+    if (filterBtn && filterBtn.closest('.category-filter-bar')) {
+      const filterGroup = filterBtn.closest('.category-filter-bar').getAttribute('data-filter-group');
+      const filterVal = filterBtn.getAttribute('data-filter');
+      if (filterGroup && filterVal) {
+        filterProductCards(filterGroup, filterVal);
+      }
+    }
+
+    // Dropdown / Mobile Sublink Click with data-filter
+    const sublink = e.target.closest('[data-filter]');
+    if (sublink && (sublink.classList.contains('dropdown-item') || sublink.classList.contains('mobile-sublink'))) {
+      const href = sublink.getAttribute('href');
+      const filterVal = sublink.getAttribute('data-filter');
+      if (href && filterVal) {
+        const sectionId = href.replace('#', '');
+        setTimeout(() => {
+          filterProductCards(sectionId, filterVal);
+        }, 50);
+      }
+    }
+  });
+
+  // Initial Router Trigger
+  switchView(window.location.hash, true);
 
   // 2. MOBILE MENU DRAWER
   const mobileToggle = document.querySelector('.mobile-toggle');

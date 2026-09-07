@@ -2274,3 +2274,155 @@ textarea.form-control {
   color: var(--gold-300);
 }
 
+/* ==========================================================================
+   DROPDOWN NAVIGATION MENUS & MULTI-PAGE VIEW ROUTER STYLES
+   ========================================================================== */
+
+.nav-item-dropdown {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.nav-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.dropdown-arrow {
+  font-size: 0.7rem;
+  transition: transform var(--trans-fast);
+  color: var(--gold-400);
+}
+
+.nav-item-dropdown:hover .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.nav-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 220px;
+  background: rgba(30, 16, 11, 0.96);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-md);
+  padding: 8px 0;
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.8),
+    0 0 25px rgba(212, 163, 115, 0.2);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(12px);
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), 
+              transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), 
+              visibility 0.25s ease;
+  z-index: 1000;
+}
+
+.nav-item-dropdown:hover .nav-dropdown-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.nav-dropdown-menu a {
+  display: block;
+  padding: 9px 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-cream);
+  text-decoration: none;
+  transition: all var(--trans-fast);
+  border-left: 3px solid transparent;
+}
+
+.nav-dropdown-menu a:hover {
+  background: rgba(212, 163, 115, 0.14);
+  color: var(--gold-300);
+  border-left-color: var(--gold-400);
+  padding-left: 24px;
+}
+
+/* Mobile Drawer Submenu Accordions */
+.mobile-nav-submenu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 16px;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  border-left: 2px solid rgba(212, 163, 115, 0.2);
+}
+
+.mobile-nav-submenu a {
+  font-size: 0.92rem !important;
+  color: var(--text-muted) !important;
+  padding: 4px 0 !important;
+}
+
+.mobile-nav-submenu a:hover {
+  color: var(--gold-300) !important;
+}
+
+/* Page View Router Transitions */
+.page-view-container {
+  position: relative;
+  min-height: 60vh;
+}
+
+.page-view {
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.page-view.hidden-view {
+  display: none !important;
+}
+
+.page-view.active-view {
+  display: block !important;
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Category Filter Tabs inside Chocolates and Cakes Pages */
+.category-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 36px;
+  padding: 10px 16px;
+  background: rgba(30, 16, 11, 0.6);
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-full);
+}
+
+.category-filter-btn {
+  padding: 8px 20px;
+  border-radius: var(--radius-full);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--trans-fast);
+}
+
+.category-filter-btn:hover {
+  color: var(--gold-300);
+  border-color: rgba(212, 163, 115, 0.3);
+}
+
+.category-filter-btn.active {
+  background: var(--gold-gradient);
+  color: var(--bg-primary);
+  box-shadow: var(--shadow-gold-button);
+}
+
+
