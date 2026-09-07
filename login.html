@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- SEO Meta Tags -->
+  <title>Login & Sign Up | Madhuri's Choco Heaven</title>
+  <meta name="description"
+    content="Log in or create an account at Madhuri’s Choco Heaven to place handcrafted chocolate & fresh bakery orders.">
+  <meta name="robots" content="index, follow">
+
+  <!-- Fonts & Core Stylesheets -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap"
+    rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/animations.css">
+
+  <!-- Official Brand Favicon -->
+  <link rel="icon" type="image/png" href="assets/images/logo.png">
+
+  <style>
+    .auth-page-section {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 50px 20px;
+      position: relative;
+      background:
+        radial-gradient(ellipse at 50% 30%, rgba(212, 163, 115, 0.18) 0%, rgba(21, 11, 8, 0.98) 75%),
+        radial-gradient(circle at 20% 80%, rgba(77, 46, 35, 0.4) 0%, transparent 50%),
+        #150b08;
+    }
+
+    /* TWO-COLUMN AUTH CONTAINER */
+    .auth-split-card {
+      position: relative;
+      width: 100%;
+      max-width: 980px;
+      display: grid;
+      grid-template-columns: 1fr 1.05fr;
+      background: rgba(30, 16, 11, 0.94);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--border-gold-strong);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: 
+        0 35px 80px rgba(0, 0, 0, 0.85),
+        0 0 50px rgba(212, 163, 115, 0.15);
+      animation: loginCardEntrance 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* LEFT BRANDED PANEL */
+    .auth-brand-panel {
+      position: relative;
+      padding: 48px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: 
+        linear-gradient(135deg, rgba(21, 11, 8, 0.88) 0%, rgba(35, 19, 13, 0.94) 100%),
+        url('assets/images/hero_chocolate_spread.jpg') center/cover no-repeat;
+      border-right: 1px solid var(--border-gold);
+    }
+
+    .auth-brand-header {
+      margin-bottom: 32px;
+    }
+
+    .auth-brand-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+      margin-bottom: 24px;
+    }
+
+    .auth-brand-logo img {
+      width: 60px;
+      height: 60px;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));
+    }
+
+    .auth-brand-tagline {
+      font-family: var(--font-serif);
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--gold-300);
+      line-height: 1.35;
+      margin-bottom: 12px;
+    }
+
+    .auth-brand-desc {
+      font-size: 0.94rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* BENEFIT HIGHLIGHT CARDS */
+    .auth-benefits-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 24px;
+      margin-bottom: 24px;
+    }
+
+    .auth-benefit-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 14px 16px;
+      background: rgba(21, 11, 8, 0.65);
+      border: 1px solid rgba(212, 163, 115, 0.25);
+      border-radius: var(--radius-md);
+      backdrop-filter: blur(8px);
+      transition: border-color var(--trans-fast), transform var(--trans-fast);
+    }
+
+    .auth-benefit-item:hover {
+      border-color: var(--gold-400);
+      transform: translateX(4px);
+    }
+
+    .auth-benefit-icon {
+      font-size: 1.1rem;
+      color: var(--gold-400);
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .auth-benefit-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text-cream);
+      margin-bottom: 2px;
+    }
+
+    .auth-benefit-sub {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .auth-brand-footer-text {
+      font-size: 0.84rem;
+      color: var(--gold-400);
+      letter-spacing: 0.5px;
+    }
+
+    /* RIGHT FORM PANEL */
+    .auth-form-panel {
+      padding: 48px 42px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .auth-title-large {
+      font-family: var(--font-serif);
+      font-size: 1.9rem;
+      font-weight: 700;
+      color: var(--gold-300);
+      margin-bottom: 6px;
+    }
+
+    .auth-subtitle-text {
+      font-size: 0.94rem;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    .auth-link-forgot {
+      font-size: 0.84rem;
+      color: var(--gold-400);
+      text-decoration: underline;
+      float: right;
+      cursor: pointer;
+    }
+
+    .auth-link-forgot:hover {
+      color: var(--gold-300);
+    }
+
+    .auth-footer-prompt {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .auth-guest-link {
+      display: block;
+      text-align: center;
+      margin-top: 18px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      text-decoration: underline;
+      transition: color var(--trans-fast);
+    }
+
+    .auth-guest-link:hover {
+      color: var(--gold-400);
+    }
+
+    /* RESPONSIVE STACKING FOR MOBILE & TABLET */
+    @media (max-width: 860px) {
+      .auth-split-card {
+        grid-template-columns: 1fr;
+        max-width: 480px;
+      }
+      .auth-brand-panel {
+        border-right: none;
+        border-bottom: 1px solid var(--border-gold);
+        padding: 32px 24px;
+      }
+      .auth-form-panel {
+        padding: 36px 24px;
+      }
+      .auth-brand-tagline {
+        font-size: 1.3rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <section class="auth-page-section">
+      <div class="auth-split-card">
+
+        <!-- ==========================================================================
+             LEFT SIDE: BRANDED PANELS & HIGHLIGHTS
+             ========================================================================== -->
+        <div class="auth-brand-panel">
+          <div>
+            <a href="index.html" class="auth-brand-logo" aria-label="Madhuri's Choco Heaven Home">
+              <img src="assets/images/logo.png" alt="Madhuri's Choco Heaven Logo">
+              <div class="brand-text">
+                <span class="brand-title" style="font-size: 1.3rem;">Madhuri’s</span>
+                <span class="brand-highlight" style="font-size: 0.95rem;">Choco Heaven</span>
+              </div>
+            </a>
+
+            <div class="auth-brand-header">
+              <h2 class="auth-brand-tagline">Where Every Celebration Becomes a Little Sweeter.</h2>
+              <p class="auth-brand-desc">
+                Handcrafted chocolates, freshly baked celebration cakes, and customized gift hampers made with love.
+              </p>
+            </div>
+
+            <div class="auth-benefits-list">
+              <div class="auth-benefit-item">
+                <span class="auth-benefit-icon">✓</span>
+                <div>
+                  <div class="auth-benefit-title">Handcrafted with Care</div>
+                  <div class="auth-benefit-sub">Artisanal chocolates and bakes prepared fresh by hand.</div>
+                </div>
+              </div>
+
+              <div class="auth-benefit-item">
+                <span class="auth-benefit-icon">✓</span>
+                <div>
+                  <div class="auth-benefit-title">Premium Quality Ingredients</div>
+                  <div class="auth-benefit-sub">Finest cocoa, pure butter, and zero preservatives.</div>
+                </div>
+              </div>
+
+              <div class="auth-benefit-item">
+                <span class="auth-benefit-icon">✓</span>
+                <div>
+                  <div class="auth-benefit-title">Made for Every Celebration</div>
+                  <div class="auth-benefit-sub">Tailored treats for birthdays, weddings & sweet moments.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="auth-brand-footer-text">
+            🍫 Handmade • 🎂 Freshly Baked • ❤️ With Love
+          </div>
+        </div>
+
+        <!-- ==========================================================================
+             RIGHT SIDE: AUTHENTICATION FORM (LOGIN & SIGNUP)
+             ========================================================================== -->
+        <div class="auth-form-panel">
+
+          <!-- Auth Tabs (Login / Sign Up) -->
+          <div class="auth-tabs">
+            <button type="button" class="auth-tab-btn active" id="tab-btn-login">Login</button>
+            <button type="button" class="auth-tab-btn" id="tab-btn-signup">Sign Up</button>
+          </div>
+
+          <!-- ==========================================================================
+               LOGIN VIEW
+               ========================================================================== -->
+          <div class="auth-form-view active" id="auth-login-view">
+            <div>
+              <h1 class="auth-title-large">Welcome Back</h1>
+              <p class="auth-subtitle-text">Login to continue your sweet experience</p>
+            </div>
+
+            <div class="auth-error-msg" id="login-error-msg"></div>
+
+            <form id="auth-login-form" novalidate>
+              <div class="form-group" style="margin-bottom: 18px;">
+                <label for="login-email" class="form-label">Email Address</label>
+                <input type="email" id="login-email" class="form-control" placeholder="Enter your email" required>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <label for="login-password" class="form-label" style="margin-bottom: 0;">Password</label>
+                  <a href="javascript:void(0)" class="auth-link-forgot" id="btn-forgot-pass">Forgot Password?</a>
+                </div>
+                <div class="password-field-wrap">
+                  <input type="password" id="login-password" class="form-control" placeholder="Enter your password" required>
+                  <button type="button" class="toggle-pass-btn" id="btn-toggle-password" aria-label="Show password">👁️</button>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-gold btn-lg login-btn-submit" style="width: 100%;">
+                <span>Login</span>
+                <span class="btn-icon-arrow">→</span>
+              </button>
+            </form>
+
+            <div class="auth-footer-prompt">
+              Don't have an account? <span class="auth-switch-link" id="link-to-signup">Sign Up →</span>
+            </div>
+
+            <a href="index.html" class="auth-guest-link">← Return to Homepage</a>
+          </div>
+
+          <!-- ==========================================================================
+               SIGNUP VIEW
+               ========================================================================== -->
+          <div class="auth-form-view" id="auth-signup-view">
+            <div>
+              <h1 class="auth-title-large">Create Your Account</h1>
+              <p class="auth-subtitle-text">Join Madhuri's Choco Heaven</p>
+            </div>
+
+            <div class="auth-error-msg" id="signup-error-msg"></div>
+
+            <form id="auth-signup-form" novalidate>
+              <div class="form-group" style="margin-bottom: 14px;">
+                <label for="signup-name" class="form-label">Full Name</label>
+                <input type="text" id="signup-name" class="form-control" placeholder="e.g. Ananya Sharma" required>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 14px;">
+                <label for="signup-email" class="form-label">Email Address</label>
+                <input type="email" id="signup-email" class="form-control" placeholder="Enter your email" required>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 14px;">
+                <label for="signup-password" class="form-label">Password</label>
+                <input type="password" id="signup-password" class="form-control" placeholder="At least 6 characters" required>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 22px;">
+                <label for="signup-confirm-password" class="form-label">Confirm Password</label>
+                <input type="password" id="signup-confirm-password" class="form-control" placeholder="Re-enter password" required>
+              </div>
+
+              <button type="submit" class="btn btn-gold btn-lg login-btn-submit" style="width: 100%;">
+                <span>Sign Up</span>
+                <span class="btn-icon-arrow">→</span>
+              </button>
+            </form>
+
+            <div class="auth-footer-prompt">
+              Already have an account? <span class="auth-switch-link" id="link-to-login">Login →</span>
+            </div>
+
+            <a href="index.html" class="auth-guest-link">← Return to Homepage</a>
+          </div>
+
+          <!-- ALREADY LOGGED IN VIEW -->
+          <div id="already-logged-in-box" style="display: none; text-align: center; padding: 20px 0;">
+            <div style="font-size: 2.8rem; margin-bottom: 12px;">👤</div>
+            <h3 style="color: var(--gold-300); margin-bottom: 8px;" id="logged-in-user-name">Welcome Back!</h3>
+            <p style="color: var(--text-muted); margin-bottom: 24px;">You are currently logged in.</p>
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+              <a href="index.html" class="btn btn-gold">Return to Homepage</a>
+              <button type="button" class="btn btn-outline" id="btn-page-logout">Logout</button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = window.AuthSystem ? window.AuthSystem.getCurrentUser() : null;
+      const loginView = document.getElementById('auth-login-view');
+      const signupView = document.getElementById('auth-signup-view');
+      const tabs = document.querySelector('.auth-tabs');
+      const loggedInBox = document.getElementById('already-logged-in-box');
+      const loggedInName = document.getElementById('logged-in-user-name');
+      const logoutBtn = document.getElementById('btn-page-logout');
+      const togglePassBtn = document.getElementById('btn-toggle-password');
+      const passInput = document.getElementById('login-password');
+
+      if (user) {
+        if (loginView) loginView.style.display = 'none';
+        if (signupView) signupView.style.display = 'none';
+        if (tabs) tabs.style.display = 'none';
+        if (loggedInBox) loggedInBox.style.display = 'block';
+        if (loggedInName) loggedInName.textContent = `Hello, ${user.name}!`;
+
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', () => {
+            window.AuthSystem.logout();
+            window.location.reload();
+          });
+        }
+      }
+
+      // Toggle Show/Hide Password
+      if (togglePassBtn && passInput) {
+        togglePassBtn.addEventListener('click', () => {
+          if (passInput.type === 'password') {
+            passInput.type = 'text';
+            togglePassBtn.textContent = '🙈';
+          } else {
+            passInput.type = 'password';
+            togglePassBtn.textContent = '👁️';
+          }
+        });
+      }
+
+      // Check URL parameters for tab preference
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      if (tabParam === 'signup') {
+        switchAuthTab('signup');
+      }
+
+      function switchAuthTab(tabName) {
+        clearAuthErrors();
+        if (tabName === 'signup') {
+          loginView.classList.remove('active');
+          signupView.classList.add('active');
+          document.getElementById('tab-btn-login').classList.remove('active');
+          document.getElementById('tab-btn-signup').classList.add('active');
+        } else {
+          signupView.classList.remove('active');
+          loginView.classList.add('active');
+          document.getElementById('tab-btn-signup').classList.remove('active');
+          document.getElementById('tab-btn-login').classList.add('active');
+        }
+      }
+
+      function clearAuthErrors() {
+        const loginErr = document.getElementById('login-error-msg');
+        const signupErr = document.getElementById('signup-error-msg');
+        if (loginErr) { loginErr.textContent = ''; loginErr.classList.remove('show'); }
+        if (signupErr) { signupErr.textContent = ''; signupErr.classList.remove('show'); }
+      }
+
+      document.getElementById('tab-btn-login')?.addEventListener('click', () => switchAuthTab('login'));
+      document.getElementById('tab-btn-signup')?.addEventListener('click', () => switchAuthTab('signup'));
+      document.getElementById('link-to-signup')?.addEventListener('click', () => switchAuthTab('signup'));
+      document.getElementById('link-to-login')?.addEventListener('click', () => switchAuthTab('login'));
+
+      // Forgot Password link
+      document.getElementById('btn-forgot-pass')?.addEventListener('click', () => {
+        alert('To reset your password, please contact Madhuri directly on WhatsApp or email.');
+      });
+
+      // Handle Login Submit
+      document.getElementById('auth-login-form')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        clearAuthErrors();
+
+        const email = document.getElementById('login-email')?.value;
+        const password = document.getElementById('login-password')?.value;
+
+        const res = window.AuthSystem.login(email, password);
+        if (!res.success) {
+          const errElem = document.getElementById('login-error-msg');
+          if (errElem) {
+            errElem.textContent = `⚠️ ${res.message}`;
+            errElem.classList.add('show');
+          }
+        } else {
+          const redirect = urlParams.get('redirect') || 'index.html';
+          window.location.href = redirect;
+        }
+      });
+
+      // Handle Signup Submit
+      document.getElementById('auth-signup-form')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        clearAuthErrors();
+
+        const name = document.getElementById('signup-name')?.value;
+        const email = document.getElementById('signup-email')?.value;
+        const password = document.getElementById('signup-password')?.value;
+        const confirmPassword = document.getElementById('signup-confirm-password')?.value;
+
+        const res = window.AuthSystem.signup(name, email, password, confirmPassword);
+        if (!res.success) {
+          const errElem = document.getElementById('signup-error-msg');
+          if (errElem) {
+            errElem.textContent = `⚠️ ${res.message}`;
+            errElem.classList.add('show');
+          }
+        } else {
+          const redirect = urlParams.get('redirect') || 'index.html';
+          window.location.href = redirect;
+        }
+      });
+    });
+  </script>
+</body>
+
+</html>
