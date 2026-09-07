@@ -1,0 +1,369 @@
+/* ==========================================================================
+   MADHURI'S CHOCO HEAVEN - CORE DESIGN SYSTEM & STYLES
+   Boutique Luxury Chocolate & Fresh Bakery Aesthetics
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Cocoa & Chocolate Palette */
+  --bg-primary: #150B08;
+  --bg-secondary: #1F110D;
+  --bg-card: #271611;
+  --bg-card-hover: #321D16;
+  --bg-card-glass: rgba(39, 22, 17, 0.85);
+  --bg-light-cream: #FAF6F0;
+  --bg-light-warm: #F4EDE2;
+
+  /* Gold & Warm Caramel Accents */
+  --gold-300: #F3DEB8;
+  --gold-400: #E4BC84;
+  --gold-500: #D4A373;
+  --gold-600: #B88554;
+  --gold-gradient: linear-gradient(135deg, #ECCB9F 0%, #D4A373 50%, #B88554 100%);
+  --gold-gradient-hover: linear-gradient(135deg, #F5DCB4 0%, #E0B183 50%, #C79462 100%);
+  --gold-glow: 0 0 25px rgba(212, 163, 115, 0.35);
+
+  /* Text Colors */
+  --text-pure: #FFFFFF;
+  --text-cream: #FDFBF7;
+  --text-muted: #D1C5B6;
+  --text-dim: #A69685;
+  --text-dark: #24140F;
+  --text-dark-muted: #5C453C;
+
+  /* Borders & Accents */
+  --border-gold: rgba(212, 163, 115, 0.28);
+  --border-gold-strong: rgba(212, 163, 115, 0.6);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-card: rgba(212, 163, 115, 0.15);
+  --accent-rose: #D9534F;
+  --accent-green: #25D366; /* WhatsApp brand */
+
+  /* Typography */
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+
+  /* Layout & Spacing */
+  --container-width: 1240px;
+  --header-height: 84px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 4px 12px rgba(10, 5, 3, 0.3);
+  --shadow-md: 0 10px 30px rgba(10, 5, 3, 0.45);
+  --shadow-lg: 0 20px 50px rgba(10, 5, 3, 0.6);
+  --shadow-gold-button: 0 8px 24px rgba(212, 163, 115, 0.3);
+
+  /* Transitions */
+  --trans-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --trans-normal: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  --trans-smooth: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================================================================
+   CSS RESET & BASE STYLES
+   ========================================================================== */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: var(--header-height);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+section {
+  scroll-margin-top: var(--header-height);
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-primary);
+  color: var(--text-cream);
+  line-height: 1.68;
+  overflow-x: hidden;
+  position: relative;
+  background-image: 
+    radial-gradient(circle at 15% 20%, rgba(77, 46, 35, 0.25) 0%, transparent 40%),
+    radial-gradient(circle at 85% 75%, rgba(62, 36, 27, 0.2) 0%, transparent 45%);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--trans-fast);
+}
+
+button, input, textarea, select {
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+ul, ol {
+  list-style: none;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-card);
+  border: 2px solid var(--bg-primary);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold-500);
+}
+
+/* Selection Highlight */
+::selection {
+  background: var(--gold-500);
+  color: var(--bg-primary);
+}
+
+/* ==========================================================================
+   LAYOUT UTILITIES
+   ========================================================================== */
+
+.container {
+  width: 100%;
+  max-width: var(--container-width);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.section-padding {
+  padding-top: 100px;
+  padding-bottom: 100px;
+  position: relative;
+}
+
+@media (max-width: 768px) {
+  .section-padding {
+    padding-top: 70px;
+    padding-bottom: 70px;
+  }
+}
+
+/* Subtle Section Divider */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-gold), transparent);
+  width: 80%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Light Section Variation */
+.section-light {
+  background-color: var(--bg-light-cream);
+  color: var(--text-dark);
+}
+.section-light .section-subtitle {
+  color: var(--gold-600);
+}
+.section-light .section-title {
+  color: var(--text-dark);
+}
+.section-light .section-desc {
+  color: var(--text-dark-muted);
+}
+
+/* ==========================================================================
+   TYPOGRAPHY
+   ========================================================================== */
+
+h1, h2, h3, h4, .font-serif {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--text-cream);
+}
+
+.text-gold {
+  color: var(--gold-400);
+}
+
+.text-gradient-gold {
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+/* Standard Section Header Block */
+.section-header {
+  text-align: center;
+  max-width: 760px;
+  margin: 0 auto 60px auto;
+}
+
+.section-subtitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--gold-400);
+  margin-bottom: 14px;
+  background: rgba(212, 163, 115, 0.1);
+  padding: 6px 16px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(212, 163, 115, 0.2);
+}
+
+.section-title {
+  font-size: clamp(2.1rem, 4vw, 3.2rem);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 18px;
+}
+
+.section-desc {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+/* ==========================================================================
+   BUTTONS & CTAS
+   ========================================================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 30px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all var(--trans-normal);
+  text-align: center;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-gold {
+  background: var(--gold-gradient);
+  color: var(--bg-primary);
+  box-shadow: var(--shadow-gold-button);
+}
+.btn-gold:hover {
+  background: var(--gold-gradient-hover);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(212, 163, 115, 0.45);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--text-cream);
+  border: 1.5px solid var(--gold-400);
+  backdrop-filter: blur(8px);
+}
+.btn-outline:hover {
+  background: rgba(212, 163, 115, 0.15);
+  color: var(--gold-300);
+  border-color: var(--gold-300);
+  transform: translateY(-3px);
+}
+
+.btn-whatsapp {
+  background-color: #25D366;
+  color: #FFFFFF;
+  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.3);
+}
+.btn-whatsapp:hover {
+  background-color: #20BA5A;
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(37, 211, 102, 0.45);
+}
+
+.btn-sm {
+  padding: 8px 18px;
+  font-size: 0.88rem;
+}
+
+.btn-lg {
+  padding: 16px 36px;
+  font-size: 1.1rem;
+}
+
+.btn-icon-arrow {
+  transition: transform var(--trans-fast);
+}
+.btn:hover .btn-icon-arrow {
+  transform: translateX(4px);
+}
+
+/* ==========================================================================
+   BADGES & PILLS
+   ========================================================================== */
+
+.badge-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.badge-gold {
+  background: rgba(212, 163, 115, 0.18);
+  color: var(--gold-300);
+  border: 1px solid rgba(212, 163, 115, 0.35);
+}
+
+.badge-price {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gold-400);
+  font-style: italic;
+  font-family: var(--font-serif);
+}
+
+/* Accessible Screen Reader Only Utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
