@@ -71,7 +71,8 @@
   <header class="site-header" id="site-header" role="banner">
     <div class="container header-container">
       <a href="#home" class="brand-logo" aria-label="Madhuri's Choco Heaven Home">
-        <img src="assets/images/logo.png" alt="Madhuri's Choco Heaven Official Brand Logo" class="brand-logo-img" width="76" height="76">
+        <img src="assets/images/logo.png" alt="Madhuri's Choco Heaven Official Brand Logo" class="brand-logo-img"
+          width="76" height="76">
         <div class="brand-text">
           <span class="brand-title">Madhuri’s</span>
           <span class="brand-highlight">Choco Heaven</span>
@@ -85,13 +86,15 @@
         <a href="#categories" class="nav-link">Creations</a>
         <a href="#chocolates" class="nav-link">Chocolates</a>
         <a href="#cakes-bakes" class="nav-link">Cakes & Bakes</a>
-        <a href="#occasions" class="nav-link">Occasions</a>
-        <a href="#gallery" class="nav-link">Gallery</a>
         <a href="#contact" class="nav-link">Contact</a>
       </nav>
 
       <!-- Header Action & Mobile Trigger -->
       <div class="header-actions">
+        <div class="header-auth-controls" id="header-auth-controls">
+          <a href="login.html?tab=login" class="btn-nav-login">Login</a>
+          <a href="login.html?tab=signup" class="btn-nav-signup">Sign Up</a>
+        </div>
         <a href="#contact" class="btn btn-gold btn-sm header-cta">Order Now</a>
         <button class="mobile-toggle" id="mobile-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
           <span></span>
@@ -107,7 +110,8 @@
   <aside class="mobile-drawer" id="mobile-drawer" aria-label="Mobile Navigation Drawer">
     <div class="mobile-drawer-header">
       <a href="#home" class="brand-logo" aria-label="Madhuri's Choco Heaven Home">
-        <img src="assets/images/logo.png" alt="Madhuri's Choco Heaven Official Brand Logo" class="drawer-logo-img" width="56" height="56">
+        <img src="assets/images/logo.png" alt="Madhuri's Choco Heaven Official Brand Logo" class="drawer-logo-img"
+          width="56" height="56">
         <div class="brand-text">
           <span class="brand-title">Madhuri’s</span>
           <span class="brand-highlight">Choco Heaven</span>
@@ -120,12 +124,13 @@
       <a href="#categories" class="nav-link">Categories</a>
       <a href="#chocolates" class="nav-link">Chocolates</a>
       <a href="#cakes-bakes" class="nav-link">Cakes & Bakes</a>
-      <a href="#occasions" class="nav-link">Occasions</a>
       <a href="#custom-order" class="nav-link">Custom Orders</a>
-      <a href="#gallery" class="nav-link">Gallery</a>
       <a href="#contact" class="nav-link">Contact & Order</a>
+      <a href="login.html?tab=login" class="nav-link" style="color: var(--gold-400);">Login</a>
+      <a href="login.html?tab=signup" class="nav-link" style="color: var(--gold-300); font-weight: 700;">Sign Up</a>
     </nav>
     <div class="mobile-drawer-footer">
+      <div class="mobile-auth-controls" id="mobile-auth-controls"></div>
       <div class="mobile-drawer-brand">🍫 Handmade • 🎂 Freshly Baked • ❤️ With Love</div>
       <a href="#contact" class="btn btn-gold" style="width: 100%;">Order Now</a>
     </div>
@@ -1541,7 +1546,8 @@
         <!-- Brand Col -->
         <div class="footer-brand">
           <a href="#home" class="brand-logo footer-brand-logo" aria-label="Madhuri's Choco Heaven Home">
-            <img src="assets/images/logo.png" alt="Madhuri's Choco Heaven Official Brand Logo" class="footer-logo-img" width="80" height="80">
+            <img src="assets/images/logo.png" alt="Madhuri's Choco Heaven Official Brand Logo" class="footer-logo-img"
+              width="80" height="80">
             <div class="brand-text">
               <span class="brand-title">Madhuri’s</span>
               <span class="brand-highlight">Choco Heaven</span>
@@ -1634,6 +1640,7 @@
 
   <!-- Scripts -->
   <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/testimonials.js"></script>
   <script src="js/gallery-lightbox.js"></script>
   <script src="js/app.js"></script>
