@@ -32,6 +32,7 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/splash-login.css">
 
   <!-- Official Brand Favicon -->
   <link rel="icon" type="image/png" href="assets/images/logo.png">
@@ -66,6 +67,175 @@
 
 <body>
   <!-- ==========================================================================
+       CINEMATIC ANIMATED SPLASH / OPENING SCREEN
+       ========================================================================== -->
+  <!-- ==========================================================================
+       CINEMATIC ANIMATED SPLASH / OPENING SCREEN - "THE CHOCOLATE REVEAL"
+       ========================================================================== -->
+  <div class="splash-screen" id="splash-screen" aria-label="Welcome to Madhuri's Choco Heaven">
+    <!-- Animated Liquid Chocolate & Ambient Sheen Layers -->
+    <div class="splash-sheen-layer" aria-hidden="true"></div>
+    <div class="splash-vignette" aria-hidden="true"></div>
+    
+    <!-- Gathering Cocoa & Gold Dust Particles Canvas -->
+    <canvas id="splash-particles" class="splash-canvas" aria-hidden="true"></canvas>
+
+    <!-- Golden Light Sweep Beam Behind Logo -->
+    <div class="splash-light-sweep" aria-hidden="true"></div>
+
+    <!-- Framing Chocolate Elements (Cinematic Depth of Field) -->
+    <!-- Left Flank: Chocolate Curls, Roasted Cocoa Bean & Flakes -->
+    <div class="splash-flank splash-flank-left" aria-hidden="true">
+      <!-- Background Soft Chocolate Curl (Depth of Field) -->
+      <div class="choc-elem choc-curl-bg">
+        <svg viewBox="0 0 130 170" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22,140 C10,95 40,35 85,20 C118,10 128,32 110,62 C88,95 32,112 48,155 C54,165 32,160 22,140 Z" fill="url(#curlGrad1)" filter="drop-shadow(0 8px 20px rgba(0,0,0,0.6))" />
+          <path d="M42,120 C60,88 95,54 105,32 C78,54 48,88 38,126 Z" fill="url(#curlHighlight)" opacity="0.85" />
+          <defs>
+            <linearGradient id="curlGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#6B3724"/>
+              <stop offset="45%" stop-color="#3D1D12"/>
+              <stop offset="100%" stop-color="#1A0A05"/>
+            </linearGradient>
+            <linearGradient id="curlHighlight" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#D4A373" stop-opacity="0.9"/>
+              <stop offset="60%" stop-color="#8C5338" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="#3D1D12" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
+      <!-- Crisp Roasted Cocoa Bean with Gold Crease Foreground -->
+      <div class="choc-elem choc-bean-fg">
+        <svg viewBox="0 0 100 75" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="50" cy="38" rx="44" ry="26" transform="rotate(-18 50 38)" fill="url(#beanGrad)" filter="drop-shadow(0 10px 20px rgba(0,0,0,0.7))" />
+          <path d="M16,48 C36,40 68,34 88,25" stroke="#E4BC84" stroke-width="2.6" stroke-linecap="round" opacity="0.85" />
+          <path d="M22,40 C42,32 64,28 82,20" stroke="#FFF2D6" stroke-width="1.2" stroke-linecap="round" opacity="0.5" />
+          <defs>
+            <radialGradient id="beanGrad" cx="38%" cy="32%" r="62%">
+              <stop offset="0%" stop-color="#7A3D27"/>
+              <stop offset="50%" stop-color="#421E12"/>
+              <stop offset="100%" stop-color="#180703"/>
+            </radialGradient>
+          </defs>
+        </svg>
+      </div>
+
+      <!-- Floating Chocolate Flake / Cocoa Shaving -->
+      <div class="choc-elem choc-flake-left">
+        <svg viewBox="0 0 65 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8,32 C20,12 46,10 58,25 C42,36 24,38 8,32 Z" fill="url(#flakeGrad)" filter="drop-shadow(0 6px 12px rgba(0,0,0,0.5))" />
+          <path d="M16,24 C30,16 44,16 52,22" stroke="#D4A373" stroke-width="1.5" stroke-linecap="round" opacity="0.7" />
+          <defs>
+            <linearGradient id="flakeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#5E3020"/>
+              <stop offset="100%" stop-color="#241008"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Right Flank: Artisan Chocolate Truffle, Ingot & Golden Shavings -->
+    <div class="splash-flank splash-flank-right" aria-hidden="true">
+      <!-- Background Soft Artisanal Truffle with Golden Dust (Depth of Field) -->
+      <div class="choc-elem choc-truffle-bg">
+        <svg viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="70" cy="70" r="58" fill="url(#truffleGrad)" filter="drop-shadow(0 12px 28px rgba(0,0,0,0.75))" />
+          <!-- Golden cocoa dust dusting -->
+          <circle cx="55" cy="48" r="34" fill="url(#goldDustGrad)" opacity="0.65" />
+          <defs>
+            <radialGradient id="truffleGrad" cx="36%" cy="34%" r="64%">
+              <stop offset="0%" stop-color="#6E3520"/>
+              <stop offset="50%" stop-color="#3A1A0F"/>
+              <stop offset="100%" stop-color="#140602"/>
+            </radialGradient>
+            <radialGradient id="goldDustGrad" cx="42%" cy="40%" r="52%">
+              <stop offset="0%" stop-color="#F3DEB8" stop-opacity="0.9"/>
+              <stop offset="50%" stop-color="#D4A373" stop-opacity="0.5"/>
+              <stop offset="100%" stop-color="#3A1A0F" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+        </svg>
+      </div>
+
+      <!-- Handcrafted Chocolate Square / Ingot with Beveled Facets -->
+      <div class="choc-elem choc-piece-fg">
+        <svg viewBox="0 0 110 95" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18,25 L82,14 L96,62 L32,77 Z" fill="url(#chocPieceDark)" filter="drop-shadow(0 14px 28px rgba(0,0,0,0.8))" />
+          <path d="M18,25 L82,14 L74,30 L26,38 Z" fill="url(#chocPieceTop)" />
+          <path d="M32,77 L96,62 L90,46 L26,60 Z" fill="#200B05" opacity="0.85" />
+          <!-- Subtle gold seal glow in center -->
+          <circle cx="54" cy="45" r="12" fill="url(#pieceGoldGlow)" opacity="0.6" />
+          <defs>
+            <linearGradient id="chocPieceDark" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#54281A"/>
+              <stop offset="100%" stop-color="#200B05"/>
+            </linearGradient>
+            <linearGradient id="chocPieceTop" x1="0%" y1="100%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#7C3E28"/>
+              <stop offset="100%" stop-color="#A25A3D"/>
+            </linearGradient>
+            <radialGradient id="pieceGoldGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#FFF0D0"/>
+              <stop offset="40%" stop-color="#D4A373"/>
+              <stop offset="100%" stop-color="#200B05" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+        </svg>
+      </div>
+
+      <!-- Floating Chocolate Curl Right -->
+      <div class="choc-elem choc-curl-right">
+        <svg viewBox="0 0 80 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M58,16 C70,45 52,80 24,92 C6,98 12,80 26,62 C40,42 50,22 58,16 Z" fill="url(#curlGrad2)" filter="drop-shadow(0 8px 18px rgba(0,0,0,0.6))" />
+          <defs>
+            <linearGradient id="curlGrad2" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#8C4931"/>
+              <stop offset="50%" stop-color="#4B2316"/>
+              <stop offset="100%" stop-color="#1E0A04"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Center Hero Branding Composition -->
+    <div class="splash-content">
+      <!-- Prominent Official Circular Brand Logo -->
+      <div class="splash-logo-wrap">
+        <div class="splash-logo-glow" aria-hidden="true"></div>
+        <div class="splash-logo-sheen" aria-hidden="true"></div>
+        <img src="assets/images/logo.png" alt="Madhuri’s Choco Heaven Official Brand Logo" class="splash-logo-img" width="260" height="260">
+      </div>
+
+      <!-- Brand Title -->
+      <h1 class="splash-brand-title">
+        Madhuri’s <span class="gold-accent">Choco Heaven</span>
+      </h1>
+
+      <!-- Tagline -->
+      <p class="splash-tagline">
+        Where every celebration becomes a little sweeter.
+      </p>
+
+      <!-- Elegant Gold Flourish Line -->
+      <div class="splash-divider" aria-hidden="true">
+        <span class="splash-divider-diamond">◆</span>
+      </div>
+    </div>
+
+    <!-- Slender Gold Progress Indicator -->
+    <div class="splash-progress-wrap" aria-hidden="true">
+      <div class="splash-progress-track">
+        <div class="splash-progress-bar" id="splash-progress-bar"></div>
+      </div>
+      <span class="splash-loading-text">Crafting Sweetness...</span>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
        STICKY LUXURY NAVIGATION BAR
        ========================================================================== -->
   <header class="site-header" id="site-header" role="banner">
@@ -82,7 +252,6 @@
       <nav class="nav-desktop" aria-label="Primary Navigation">
         <a href="#home" class="nav-link active">Home</a>
         <a href="#about" class="nav-link">About</a>
-        <a href="#categories" class="nav-link">Creations</a>
         <a href="#chocolates" class="nav-link">Chocolates</a>
         <a href="#cakes-bakes" class="nav-link">Cakes & Bakes</a>
         <a href="#occasions" class="nav-link">Occasions</a>
@@ -1637,6 +1806,7 @@
   <script src="js/testimonials.js"></script>
   <script src="js/gallery-lightbox.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/splash-auth.js"></script>
 </body>
 
 </html>
