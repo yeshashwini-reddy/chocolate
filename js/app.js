@@ -23,6 +23,26 @@ document.addEventListener('DOMContentLoaded', () => {
       heroMedia.style.transform = `translateY(${scrollY * 0.12}px)`;
       if (heroText) heroText.style.transform = `translateY(${scrollY * 0.05}px)`;
     }
+
+    // Update Top Scroll Progress Bar
+    const progressBar = document.getElementById('scroll-progress-bar');
+    if (progressBar) {
+      const totalScrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (totalScrollHeight > 0) {
+        const progress = Math.min(100, Math.max(0, (window.scrollY / totalScrollHeight) * 100));
+        progressBar.style.width = `${progress}%`;
+      }
+    }
+
+    // Toggle Floating Back to Top Button
+    const floatingBackToTop = document.getElementById('back-to-top-float');
+    if (floatingBackToTop) {
+      if (window.scrollY > 380) {
+        floatingBackToTop.classList.add('visible');
+      } else {
+        floatingBackToTop.classList.remove('visible');
+      }
+    }
   }
 
   window.addEventListener('scroll', handleScroll, { passive: true });
@@ -45,6 +65,155 @@ document.addEventListener('DOMContentLoaded', () => {
     '#contact': 'view-contact'
   };
 
+  // 1B. PRODUCT CATALOGUE RENDERING & FILTERING SYSTEM
+  function getProductWhatsAppUrl(prod, extraDetail = '') {
+    const waNumber = window.BRAND_CONFIG?.contact?.whatsappNumber || 'YOUR_WHATSAPP_NUMBER';
+    let msg = '';
+
+    if (prod.type === 'theme') {
+      const occasionText = extraDetail ? ` for ${extraDetail}` : '';
+      msg = `Hi Madhuri’s Choco Heaven, I’m interested in Theme-Based Chocolates${occasionText}. I’d like to discuss customisation, theme options and pricing.`;
+    } else if (prod.type === 'corporate') {
+      msg = `Hi Madhuri’s Choco Heaven, I’m interested in Corporate Chocolate Orders customised with our company logo/branding. Please share details on corporate packages, quantity and pricing.`;
+    } else if (prod.type === 'bouquet') {
+      msg = `Hi Madhuri’s Choco Heaven, I’m interested in Chocolate Bouquets. I’d like to know more about customisation, bouquet arrangements and pricing.`;
+    } else if (prod.type === 'hamper') {
+      msg = `Hi Madhuri’s Choco Heaven, I’m interested in Occasion Hampers. I’d like to discuss custom hamper arrangements, contents and pricing.`;
+    } else if (prod.type === 'flavoured') {
+      const flavourText = extraDetail ? ` (Flavour: ${extraDetail})` : '';
+      msg = `Hi Madhuri’s Choco Heaven, I’m interested in Flavoured Chocolates${flavourText}. I’d like to know more about customisation, quantity and pricing.`;
+    } else {
+      msg = `Hi Madhuri’s Choco Heaven, I’m interested in ${prod.name}. I’d like to know more about customisation, quantity and pricing.`;
+    }
+
+    return `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
+  }
+
+  function renderChocolatesCatalogue() {
+    const container = document.getElementById('chocolate-products-grid');
+    if (!container || !window.BRAND_CONFIG || !window.BRAND_CONFIG.chocolates) return;
+
+    const chocolates = window.BRAND_CONFIG.chocolates;
+    container.innerHTML = '';
+
+    chocolates.forEach((prod, index) => {
+      const article = document.createElement('article');
+      article.className = `product-card reveal-on-scroll ${prod.isProminent ? 'product-card-prominent' : ''}`;
+      article.setAttribute('data-category', prod.category);
+      article.setAttribute('id', `card-${prod.id}`);
+
+      // Tags Row
+      let tagsHtml = '';
+      if (prod.badge) {
+        tagsHtml += `<span class="badge-tag badge-gold badge-special">${prod.badge}</span>`;
+      }
+      if (prod.tags && prod.tags.length > 0) {
+        prod.tags.forEach(tag => {
+          tagsHtml += `<span class="badge-tag">${tag}</span>`;
+        });
+      }
+
+      // Special content per product type
+      let specialContentHtml = '';
+
+      // Theme-Based Occasions Chips
+      if (prod.type === 'theme' && prod.supportedOccasions) {
+        specialContentHtml = `
+          <div class="product-occasions-box">
+            <span class="occasions-badge-label">Supported Occasions:</span>
+            <div class="occasions-chips-wrap">
+              ${prod.supportedOccasions.map(occ => `<button type="button" class="occasion-chip" data-occasion="${occ}" title="Select ${occ}">${occ}</button>`).join('')}
+              <span class="occasion-chip-extra">+ more celebrations</span>
+            </div>
+          </div>
+        `;
+      }
+
+      // Corporate Logo Placeholder Area
+      if (prod.type === 'corporate') {
+        specialContentHtml = `
+          <div class="corporate-branding-box">
+            <div class="corporate-logo-placeholder">
+              <span class="corp-placeholder-icon">🏢</span>
+              <div class="corp-placeholder-text">
+                <strong>Your Company Logo / Branding Here</strong>
+                <span>Placeholder for custom logo, corporate colors & bespoke packaging</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Flavoured Chocolate Selector Pills
+      if (prod.type === 'flavoured' && prod.flavours) {
+        specialContentHtml = `
+          <div class="product-flavours-box">
+            <div class="flavours-header">
+              <span class="flavours-badge-label">Available Flavours:</span>
+              <span class="active-flavour-badge" id="flavour-badge-${prod.id}">All Flavours</span>
+            </div>
+            <div class="flavour-pills-row" data-product-id="${prod.id}">
+              ${prod.flavours.map(f => `
+                <button type="button" class="flavour-pill" data-flavour="${f.name}" title="${f.name} Flavour">
+                  <span class="flavour-emoji">${f.emoji}</span>
+                  <span class="flavour-name">${f.label}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      const initialWaUrl = getProductWhatsAppUrl(prod);
+
+      article.innerHTML = `
+        <div class="product-img-box">
+          <img src="${prod.image}" alt="${prod.name} - Madhuri's Choco Heaven" loading="lazy" onerror="this.onerror=null; this.src='assets/images/chocolate_truffles_box.jpg';">
+          <div class="product-tags-row">
+            ${tagsHtml}
+          </div>
+        </div>
+        <div class="product-body">
+          <div class="product-category-crumb">${prod.categoryLabel || 'Chocolates'}</div>
+          <h3 class="product-name">${prod.name}</h3>
+          <p class="product-desc">${prod.desc}</p>
+          ${specialContentHtml}
+          <div class="product-footer">
+            <div class="price-box">
+              <span class="price-label">Pricing</span>
+              <span class="price-text">${prod.priceTag || 'Price on Request'}</span>
+            </div>
+            <div class="product-actions-group">
+              <button type="button" class="btn btn-gold btn-sm action-enquire-product"
+                data-product-name="${prod.name}"
+                data-product-category="${prod.categoryLabel || 'Chocolates'}"
+                data-product-id="${prod.id}"
+                data-action-type="${prod.type}">
+                ${prod.actionText || 'Customise & Enquire'}
+              </button>
+              <a href="${initialWaUrl}" target="_blank" rel="noopener noreferrer"
+                class="btn-whatsapp-quick"
+                id="wa-btn-${prod.id}"
+                data-product-id="${prod.id}"
+                aria-label="Enquire about ${prod.name} on WhatsApp"
+                title="Direct WhatsApp Enquiry">
+                <span class="wa-quick-icon" aria-hidden="true">💬</span>
+                <span class="wa-quick-text">WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+
+      container.appendChild(article);
+    });
+
+    // Mark newly rendered elements revealed
+    container.querySelectorAll('.reveal-on-scroll').forEach(el => {
+      el.classList.add('revealed');
+    });
+  }
+
   function filterProductCards(sectionId, filterValue) {
     const section = document.getElementById(sectionId);
     if (!section) return;
@@ -52,19 +221,33 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update filter button UI inside section
     const filterBtns = section.querySelectorAll('.category-filter-bar .filter-btn');
     filterBtns.forEach(btn => {
-      btn.classList.toggle('active', btn.getAttribute('data-filter') === filterValue);
+      const isActive = btn.getAttribute('data-filter') === filterValue;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
     });
 
-    // Filter product cards
+    // Filter product cards with smooth transition
     const cards = section.querySelectorAll('.product-card');
     cards.forEach(card => {
       const category = card.getAttribute('data-category');
-      if (filterValue === 'all' || category === filterValue) {
+      const shouldShow = (filterValue === 'all' || category === filterValue);
+
+      if (shouldShow) {
         card.style.display = '';
-        card.style.opacity = '1';
-        card.style.transform = 'scale(1)';
+        requestAnimationFrame(() => {
+          card.style.opacity = '1';
+          card.style.transform = 'scale(1)';
+          card.classList.remove('card-filtered-out');
+        });
       } else {
-        card.style.display = 'none';
+        card.classList.add('card-filtered-out');
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.96)';
+        setTimeout(() => {
+          if (card.classList.contains('card-filtered-out')) {
+            card.style.display = 'none';
+          }
+        }, 220);
       }
     });
   }
@@ -113,6 +296,9 @@ document.addEventListener('DOMContentLoaded', () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
+
+  // Render dynamic chocolates catalogue on initialization
+  renderChocolatesCatalogue();
 
   // Listen to hash changes & link clicks
   window.addEventListener('hashchange', () => switchView(window.location.hash));
@@ -310,7 +496,86 @@ document.addEventListener('DOMContentLoaded', () => {
     occasionBtns.forEach(b => {
       b.classList.toggle('active', b.getAttribute('data-occasion') === occId);
     });
+
+    // Populate matched treats chips
+    const occasionTreatChipsMap = {
+      'birthdays': [
+        { name: 'Theme-Based Chocolates', icon: '🎨', filter: 'customised', section: 'chocolates', hash: '#chocolates' },
+        { name: 'Celebration Theme Cakes', icon: '🎂', filter: 'cakes', section: 'cakes-bakes', hash: '#cakes-bakes' },
+        { name: 'Assorted Cupcakes', icon: '🧁', filter: 'cupcakes', section: 'cakes-bakes', hash: '#cakes-bakes' },
+        { name: 'Custom Chocolate Bars', icon: '🍫', filter: 'classic', section: 'chocolates', hash: '#chocolates' }
+      ],
+      'weddings': [
+        { name: 'Customised Gift Boxes', icon: '🎁', filter: 'gifting', section: 'chocolates', hash: '#chocolates' },
+        { name: 'Occasion Hampers', icon: '🎀', filter: 'gifting', section: 'chocolates', hash: '#chocolates' },
+        { name: 'Tier Celebration Cakes', icon: '🎂', filter: 'cakes', section: 'cakes-bakes', hash: '#cakes-bakes' },
+        { name: 'Wine-Shaped Chocolates', icon: '🍷', filter: 'specialty', section: 'chocolates', hash: '#chocolates' }
+      ],
+      'anniversaries': [
+        { name: 'Artisan Dark Chocolate', icon: '🍫', filter: 'classic', section: 'chocolates', hash: '#chocolates' },
+        { name: 'Theme-Based Chocolates', icon: '❤️', filter: 'customised', section: 'chocolates', hash: '#chocolates' },
+        { name: 'Spiced Plum Cake', icon: '🍰', filter: 'plum-cake', section: 'cakes-bakes', hash: '#cakes-bakes' },
+        { name: 'Occasion Hampers', icon: '🎁', filter: 'gifting', section: 'chocolates', hash: '#chocolates' }
+      ],
+      'baby-showers': [
+        { name: 'Creamy White Chocolate', icon: '🤍', filter: 'classic', section: 'chocolates', hash: '#chocolates' },
+        { name: 'Decorated Cupcakes', icon: '🧁', filter: 'cupcakes', section: 'cakes-bakes', hash: '#cakes-bakes' },
+        { name: 'Theme-Based Chocolates', icon: '👶', filter: 'customised', section: 'chocolates', hash: '#chocolates' },
+        { name: 'Artisan Cookies', icon: '🍪', filter: 'cookies', section: 'cakes-bakes', hash: '#cakes-bakes' }
+      ],
+      'festivals': [
+        { name: 'Dry Fruit Chocolates', icon: '🥜', filter: 'classic', section: 'chocolates', hash: '#chocolates' },
+        { name: 'Tutti Fruity Chocolates', icon: '🍒', filter: 'flavoured', section: 'chocolates', hash: '#chocolates' },
+        { name: 'Dates & Almonds Chocolates', icon: '✨', filter: 'flavoured', section: 'chocolates', hash: '#chocolates' },
+        { name: 'Festive Occasion Hampers', icon: '🎉', filter: 'gifting', section: 'chocolates', hash: '#chocolates' }
+      ],
+      'return-gifts': [
+        { name: 'Chocolate Bars', icon: '🍫', filter: 'classic', section: 'chocolates', hash: '#chocolates' },
+        { name: 'Fudgy Brownie Bites', icon: '✨', filter: 'brownies', section: 'cakes-bakes', hash: '#cakes-bakes' },
+        { name: 'Assorted Butter Cookies', icon: '🍪', filter: 'cookies', section: 'cakes-bakes', hash: '#cakes-bakes' },
+        { name: 'Customised Name Boxes', icon: '🎁', filter: 'customised', section: 'chocolates', hash: '#chocolates' }
+      ],
+      'corporate': [
+        { name: 'Corporate Logo Chocolates', icon: '🏢', filter: 'customised', section: 'chocolates', hash: '#chocolates' },
+        { name: 'Dark Chocolate Bars', icon: '🍫', filter: 'classic', section: 'chocolates', hash: '#chocolates' },
+        { name: 'Bespoke Executive Hampers', icon: '🎁', filter: 'gifting', section: 'chocolates', hash: '#chocolates' }
+      ],
+      'special-celebrations': [
+        { name: 'Chocolate Bouquets', icon: '💐', filter: 'specialty', section: 'chocolates', hash: '#chocolates' },
+        { name: 'Bounty Coconut Bars', icon: '🥥', filter: 'specialty', section: 'chocolates', hash: '#chocolates' },
+        { name: 'Celebration Cakes', icon: '🎂', filter: 'cakes', section: 'cakes-bakes', hash: '#cakes-bakes' },
+        { name: 'Occasion Hampers', icon: '🎀', filter: 'gifting', section: 'chocolates', hash: '#chocolates' }
+      ]
+    };
+
+    const occasionMatchedChips = document.getElementById('occasion-matched-chips');
+    if (occasionMatchedChips) {
+      const chips = occasionTreatChipsMap[occId] || occasionTreatChipsMap['birthdays'];
+      occasionMatchedChips.innerHTML = chips.map(chip => `
+        <a href="${chip.hash}" class="occasion-matched-chip" data-filter="${chip.filter}" data-section="${chip.section}" title="Explore ${chip.name}">
+          <span class="occasion-matched-chip-icon">${chip.icon}</span>
+          <span>${chip.name}</span>
+        </a>
+      `).join('');
+    }
   }
+
+  // Initialize occasion display on load
+  updateOccasionDisplay('birthdays');
+
+  // Occasion matched chip click filter routing
+  document.addEventListener('click', (e) => {
+    const chip = e.target.closest('.occasion-matched-chip');
+    if (chip) {
+      const section = chip.getAttribute('data-section');
+      const filter = chip.getAttribute('data-filter');
+      if (section && filter) {
+        setTimeout(() => {
+          filterCategoryProducts(section, filter);
+        }, 100);
+      }
+    }
+  });
 
   occasionBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -354,31 +619,118 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 5. PRODUCT "CUSTOMISE & ENQUIRE" BUTTONS ACTION
+  // 5. INTERACTIVE FLAVOUR & OCCASION SELECTION & PRODUCT ENQUIRY ACTION
   document.addEventListener('click', (e) => {
+    // 5A. Flavour Pill Selection (Flavoured Chocolates)
+    const flavourPill = e.target.closest('.flavour-pill');
+    if (flavourPill) {
+      const row = flavourPill.closest('.flavour-pills-row');
+      const productId = row?.getAttribute('data-product-id');
+      const flavour = flavourPill.getAttribute('data-flavour');
+      if (!productId || !flavour) return;
+
+      const isAlreadyActive = flavourPill.classList.contains('active');
+      row.querySelectorAll('.flavour-pill').forEach(p => p.classList.remove('active'));
+
+      const badge = document.getElementById(`flavour-badge-${productId}`);
+      const waBtn = document.getElementById(`wa-btn-${productId}`);
+      const card = document.getElementById(`card-${productId}`);
+      const enquireBtn = card?.querySelector('.action-enquire-product');
+      const prod = window.BRAND_CONFIG?.chocolates?.find(p => p.id === productId);
+
+      if (isAlreadyActive) {
+        if (badge) badge.textContent = 'All Flavours';
+        if (waBtn && prod) waBtn.href = getProductWhatsAppUrl(prod, '');
+        if (enquireBtn) enquireBtn.removeAttribute('data-selected-flavour');
+      } else {
+        flavourPill.classList.add('active');
+        if (badge) badge.textContent = `${flavour} Selected`;
+        if (waBtn && prod) waBtn.href = getProductWhatsAppUrl(prod, flavour);
+        if (enquireBtn) enquireBtn.setAttribute('data-selected-flavour', flavour);
+      }
+      return;
+    }
+
+    // 5B. Occasion Chip Selection (Theme-Based Chocolates)
+    const occChip = e.target.closest('.occasion-chip');
+    if (occChip) {
+      const occasionName = occChip.getAttribute('data-occasion');
+      const card = occChip.closest('.product-card');
+      const productId = card?.id?.replace('card-', '');
+      const prod = window.BRAND_CONFIG?.chocolates?.find(p => p.id === productId);
+      const waBtn = document.getElementById(`wa-btn-${productId}`);
+      const enquireBtn = card?.querySelector('.action-enquire-product');
+
+      const isChipActive = occChip.classList.contains('active');
+      card.querySelectorAll('.occasion-chip').forEach(c => c.classList.remove('active'));
+
+      if (isChipActive) {
+        if (waBtn && prod) waBtn.href = getProductWhatsAppUrl(prod, '');
+        if (enquireBtn) enquireBtn.removeAttribute('data-selected-occasion');
+      } else {
+        occChip.classList.add('active');
+        if (waBtn && prod) waBtn.href = getProductWhatsAppUrl(prod, occasionName);
+        if (enquireBtn) enquireBtn.setAttribute('data-selected-occasion', occasionName);
+      }
+      return;
+    }
+
+    // 5C. Product "Customise & Enquire" / "Enquire Now" CTA Click
     const btn = e.target.closest('.action-enquire-product');
     if (btn) {
       const productName = btn.getAttribute('data-product-name');
       const productCategory = btn.getAttribute('data-product-category') || '';
-      
+      const actionType = btn.getAttribute('data-action-type') || '';
+      const selectedFlavour = btn.getAttribute('data-selected-flavour');
+      const selectedOccasion = btn.getAttribute('data-selected-occasion');
+
       const productSelect = document.getElementById('enquiry-product');
+      const occasionSelect = document.getElementById('enquiry-occasion');
       const customNotes = document.getElementById('enquiry-customisation');
       const contactSection = document.getElementById('contact');
 
+      // 1. Select the product in the dropdown
       if (productSelect && productName) {
         let matched = false;
         for (let opt of productSelect.options) {
-          if (opt.text.toLowerCase().includes(productName.toLowerCase())) {
+          if (opt.value.toLowerCase().includes(productName.toLowerCase()) || opt.text.toLowerCase().includes(productName.toLowerCase())) {
             productSelect.value = opt.value;
             matched = true;
             break;
           }
         }
-        if (!matched && customNotes) {
-          customNotes.value = `I would like to enquire about and customise: ${productName}`;
+      }
+
+      // 2. Map occasion if selected
+      if (occasionSelect && selectedOccasion) {
+        for (let opt of occasionSelect.options) {
+          if (opt.text.toLowerCase().includes(selectedOccasion.toLowerCase())) {
+            occasionSelect.value = opt.value;
+            break;
+          }
         }
       }
 
+      // 3. Pre-fill tailored customisation notes
+      if (customNotes) {
+        if (actionType === 'theme') {
+          const occPrompt = selectedOccasion ? `Theme/Occasion: ${selectedOccasion}. ` : 'Theme/Occasion: (Rakhi, Diwali, Birthday, etc.). ';
+          customNotes.value = `${occPrompt}I would like custom handcrafted chocolates tailored for this celebration.`;
+        } else if (actionType === 'corporate') {
+          customNotes.value = `Corporate Order: Custom chocolates featuring our company logo/branding, custom box packaging and greeting sleeve.`;
+        } else if (actionType === 'flavoured') {
+          const flavPrompt = selectedFlavour ? `Flavour Preference: ${selectedFlavour}. ` : 'Flavours interested in: ';
+          customNotes.value = `${flavPrompt}Please share available assortment sizes and pricing details.`;
+        } else if (actionType === 'bouquet') {
+          customNotes.value = `Custom Chocolate Bouquet arrangement for celebration gifting.`;
+        } else if (actionType === 'hamper') {
+          customNotes.value = `Customised Occasion Hamper with assorted chocolates and celebratory packaging.`;
+        } else {
+          customNotes.value = `I am interested in ${productName}. I’d like to know more about customisation, quantity and pricing.`;
+        }
+      }
+
+      // 4. Smooth scroll to contact and highlight form
       if (contactSection) {
         contactSection.scrollIntoView({ behavior: 'smooth' });
         highlightContactForm();
@@ -434,7 +786,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function buildWhatsAppMessage(data) {
     return encodeURIComponent(
-`*New Order Enquiry - Madhuri’s Choco Heaven 🍫❤️*
+      `*New Order Enquiry - Madhuri’s Choco Heaven 🍫❤️*
 ---------------------------------------
 • *Name:* ${data.name}
 • *Phone:* ${data.phone}
@@ -544,10 +896,211 @@ _Sent via Madhuri’s Choco Heaven Website_`
     });
   }
 
+  const floatingBackToTopBtn = document.getElementById('back-to-top-float');
+  if (floatingBackToTopBtn) {
+    floatingBackToTopBtn.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
   // Set minimum date for preferred date picker to today
   const dateInput = document.getElementById('enquiry-date');
   if (dateInput) {
     const today = new Date().toISOString().split('T')[0];
     dateInput.min = today;
+  }
+
+  // ==========================================================================
+  // 10. "FROM COCOA TO CELEBRATION" - STORY TIMELINE & STAGE INTERACTION
+  // ==========================================================================
+  const storyCards = document.querySelectorAll('.story-card');
+  const storyTimelineFill = document.getElementById('story-timeline-fill');
+
+  function setStoryStage(stageNumber) {
+    storyCards.forEach(card => {
+      const isCurrent = card.getAttribute('data-stage') === String(stageNumber);
+      card.classList.toggle('active-stage', isCurrent);
+    });
+
+    if (storyTimelineFill) {
+      const stagePercent = { '1': 25, '2': 50, '3': 75, '4': 100 };
+      const width = stagePercent[String(stageNumber)] || 25;
+      storyTimelineFill.style.width = `${width}%`;
+    }
+  }
+
+  // Hover or click on story card updates stage
+  storyCards.forEach(card => {
+    card.addEventListener('mouseenter', () => {
+      const stage = card.getAttribute('data-stage');
+      if (stage) setStoryStage(stage);
+    });
+
+    card.addEventListener('click', () => {
+      const stage = card.getAttribute('data-stage');
+      if (stage) setStoryStage(stage);
+    });
+  });
+
+  // Story scroll spy via IntersectionObserver
+  if ('IntersectionObserver' in window && storyCards.length > 0) {
+    const storyObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const stage = entry.target.getAttribute('data-stage');
+          if (stage) setStoryStage(stage);
+        }
+      });
+    }, {
+      rootMargin: '0px 0px -40% 0px',
+      threshold: 0.3
+    });
+
+    storyCards.forEach(card => storyObserver.observe(card));
+  }
+
+  // ==========================================================================
+  // 11. LUXURY CUSTOM CURSOR (DESKTOP WITH FINE POINTER ONLY)
+  // ==========================================================================
+  const isFinePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (isFinePointer && !prefersReducedMotion) {
+    const cursorDot = document.getElementById('custom-cursor-dot');
+    const cursorRing = document.getElementById('custom-cursor-ring');
+
+    if (cursorDot && cursorRing) {
+      let mouseX = -100;
+      let mouseY = -100;
+      let ringX = -100;
+      let ringY = -100;
+      let isVisible = false;
+      let isAnimating = false;
+
+      function renderCursor() {
+        if (!isVisible) {
+          isAnimating = false;
+          return;
+        }
+        // Smooth lerp (linear interpolation) for ring
+        ringX += (mouseX - ringX) * 0.16;
+        ringY += (mouseY - ringY) * 0.16;
+
+        cursorDot.style.left = `${mouseX}px`;
+        cursorDot.style.top = `${mouseY}px`;
+        cursorRing.style.left = `${ringX}px`;
+        cursorRing.style.top = `${ringY}px`;
+
+        requestAnimationFrame(renderCursor);
+      }
+
+      window.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        if (!isVisible) {
+          isVisible = true;
+          cursorDot.style.opacity = '1';
+          cursorRing.style.opacity = '1';
+          if (!isAnimating) {
+            isAnimating = true;
+            requestAnimationFrame(renderCursor);
+          }
+        }
+      }, { passive: true });
+
+      // Interactive hover states on clickable elements
+      const interactiveSelector = 'a, button, input, select, textarea, .product-card, .category-card, .gallery-item, .story-card, .flavour-pill, .occasion-btn, .occasion-chip';
+
+      document.addEventListener('mouseover', (e) => {
+        if (e.target.closest(interactiveSelector)) {
+          cursorRing.classList.add('cursor-hover');
+        }
+      }, { passive: true });
+
+      document.addEventListener('mouseout', (e) => {
+        if (e.target.closest(interactiveSelector)) {
+          cursorRing.classList.remove('cursor-hover');
+        }
+      }, { passive: true });
+
+      document.addEventListener('mousedown', () => {
+        cursorRing.classList.add('cursor-active');
+      });
+
+      document.addEventListener('mouseup', () => {
+        cursorRing.classList.remove('cursor-active');
+      });
+
+      document.addEventListener('mouseleave', () => {
+        cursorDot.classList.add('custom-cursor-hidden');
+        cursorRing.classList.add('custom-cursor-hidden');
+      });
+
+      document.addEventListener('mouseenter', () => {
+        cursorDot.classList.remove('custom-cursor-hidden');
+        cursorRing.classList.remove('custom-cursor-hidden');
+      });
+    }
+  }
+
+  // ==========================================================================
+  // 12. DESKTOP MOUSE PARALLAX ON HERO MEDIA & FLOATING CARDS
+  // ==========================================================================
+  if (isFinePointer && !prefersReducedMotion) {
+    const heroSection = document.querySelector('.hero-section');
+    const heroCard1 = document.querySelector('.floating-hero-card-1');
+    const heroCard2 = document.querySelector('.floating-hero-card-2');
+    const heroImgFrame = document.querySelector('.hero-image-frame');
+
+    if (heroSection && (heroCard1 || heroCard2 || heroImgFrame)) {
+      heroSection.addEventListener('mousemove', (e) => {
+        const rect = heroSection.getBoundingClientRect();
+        const normX = (e.clientX - rect.left - rect.width / 2) / (rect.width / 2);
+        const normY = (e.clientY - rect.top - rect.height / 2) / (rect.height / 2);
+
+        if (heroCard1) {
+          heroCard1.style.transform = `translate(${normX * -14}px, ${normY * -12}px)`;
+        }
+        if (heroCard2) {
+          heroCard2.style.transform = `translate(${normX * 16}px, ${normY * 14}px)`;
+        }
+        if (heroImgFrame) {
+          heroImgFrame.style.transform = `perspective(1000px) rotateY(${normX * 3}deg) rotateX(${normY * -3}deg)`;
+        }
+      }, { passive: true });
+
+      heroSection.addEventListener('mouseleave', () => {
+        if (heroCard1) heroCard1.style.transform = '';
+        if (heroCard2) heroCard2.style.transform = '';
+        if (heroImgFrame) heroImgFrame.style.transform = '';
+      });
+    }
+  }
+
+  // ==========================================================================
+  // 13. DESKTOP MAGNETIC CTA BUTTONS
+  // ==========================================================================
+  if (isFinePointer && !prefersReducedMotion) {
+    const magneticBtns = document.querySelectorAll('.hero-ctas .btn, .btn-gold, .btn-outline, .floating-back-to-top');
+
+    magneticBtns.forEach(btn => {
+      btn.classList.add('btn-magnetic');
+
+      btn.addEventListener('mousemove', (e) => {
+        const rect = btn.getBoundingClientRect();
+        const x = e.clientX - rect.left - rect.width / 2;
+        const y = e.clientY - rect.top - rect.height / 2;
+
+        // Subtle pull limit: max 6px
+        const pullX = Math.max(-6, Math.min(6, x * 0.22));
+        const pullY = Math.max(-6, Math.min(6, y * 0.22));
+
+        btn.style.transform = `translate(${pullX}px, ${pullY}px)`;
+      });
+
+      btn.addEventListener('mouseleave', () => {
+        btn.style.transform = '';
+      });
+    });
   }
 });

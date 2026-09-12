@@ -66,6 +66,13 @@
 </head>
 
 <body>
+  <!-- Top Scroll Progress Indicator -->
+  <div class="scroll-progress-bar" id="scroll-progress-bar" aria-hidden="true"></div>
+
+  <!-- Luxury Custom Cursor (Desktop Only) -->
+  <div class="custom-cursor-dot" id="custom-cursor-dot" aria-hidden="true"></div>
+  <div class="custom-cursor-ring" id="custom-cursor-ring" aria-hidden="true"></div>
+
   <!-- ==========================================================================
        CINEMATIC ANIMATED SPLASH / OPENING SCREEN
        ========================================================================== -->
@@ -303,11 +310,11 @@
         <a href="#chocolates" class="nav-link">Chocolates ▾</a>
         <div class="mobile-submenu">
           <a href="#chocolates" class="mobile-sublink" data-filter="all">All Chocolates</a>
-          <a href="#chocolates" class="mobile-sublink" data-filter="assorted">Assorted Boxes</a>
-          <a href="#chocolates" class="mobile-sublink" data-filter="bars">Custom Bars</a>
-          <a href="#chocolates" class="mobile-sublink" data-filter="truffles">Hand-Rolled Truffles</a>
-          <a href="#chocolates" class="mobile-sublink" data-filter="personalised">Personalised Gifts</a>
-          <a href="#chocolates" class="mobile-sublink" data-filter="hampers">Festive Hampers</a>
+          <a href="#chocolates" class="mobile-sublink" data-filter="classic">Classic Chocolates</a>
+          <a href="#chocolates" class="mobile-sublink" data-filter="customised">Customised</a>
+          <a href="#chocolates" class="mobile-sublink" data-filter="gifting">Gifting</a>
+          <a href="#chocolates" class="mobile-sublink" data-filter="specialty">Specialty</a>
+          <a href="#chocolates" class="mobile-sublink" data-filter="flavoured">Flavoured</a>
         </div>
       </div>
 
@@ -494,6 +501,235 @@
     </div>
 
     <!-- ==========================================================================
+         PAGE VIEW 4: CHOCOLATES
+         ========================================================================== -->
+    <div class="page-view hidden-view" id="view-chocolates">
+      <section class="section-padding" id="chocolates" aria-labelledby="chocolates-heading">
+        <div class="container">
+          <div class="section-header reveal-on-scroll">
+            <div class="section-subtitle">Luxury Confectionery</div>
+            <h2 class="section-title" id="chocolates-heading">
+              Handcrafted <span class="text-gradient-gold">Chocolates</span>
+            </h2>
+            <p class="section-desc">
+              Made with love, crafted for every craving and celebration.
+            </p>
+          </div>
+
+          <!-- Category Filter Bar -->
+          <div class="category-filter-bar" data-filter-group="chocolates" role="tablist" aria-label="Chocolate Categories">
+            <button type="button" class="filter-btn active" data-filter="all" role="tab" aria-selected="true">ALL</button>
+            <button type="button" class="filter-btn" data-filter="classic" role="tab" aria-selected="false">CLASSIC CHOCOLATES</button>
+            <button type="button" class="filter-btn" data-filter="customised" role="tab" aria-selected="false">CUSTOMISED</button>
+            <button type="button" class="filter-btn" data-filter="gifting" role="tab" aria-selected="false">GIFTING</button>
+            <button type="button" class="filter-btn" data-filter="specialty" role="tab" aria-selected="false">SPECIALTY</button>
+            <button type="button" class="filter-btn" data-filter="flavoured" role="tab" aria-selected="false">FLAVOURED</button>
+          </div>
+
+          <!-- Dynamic Product Grid rendered from BRAND_CONFIG.chocolates -->
+          <div class="products-grid" id="chocolate-products-grid" aria-live="polite">
+            <!-- Rendered dynamically by app.js -->
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ==========================================================================
+         PAGE VIEW 5: CAKES & BAKES
+         ========================================================================== -->
+    <div class="page-view hidden-view" id="view-cakes-bakes">
+      <section class="section-padding" id="cakes-bakes" aria-labelledby="bakes-heading">
+        <div class="container">
+          <div class="section-header reveal-on-scroll">
+            <div class="section-subtitle">Fresh From Our Oven</div>
+            <h2 class="section-title" id="bakes-heading">
+              Cakes & <span class="text-gradient-gold">Artisan Bakes</span>
+            </h2>
+            <p class="section-desc">
+              Baked to order with premium butter, fresh eggs or eggless options, and pure Belgian cocoa. Warmth you
+              can
+              taste in every single bite.
+            </p>
+          </div>
+
+          <!-- Category Filter Bar -->
+          <div class="category-filter-bar" data-filter-group="cakes-bakes">
+            <button type="button" class="filter-btn active" data-filter="all">All Bakes</button>
+            <button type="button" class="filter-btn" data-filter="cakes">Celebration Cakes</button>
+            <button type="button" class="filter-btn" data-filter="cupcakes">Cupcakes & Muffins</button>
+            <button type="button" class="filter-btn" data-filter="brownies">Fudgy Brownies</button>
+            <button type="button" class="filter-btn" data-filter="cookies">Artisan Cookies</button>
+            <button type="button" class="filter-btn" data-filter="plum-cake">Spiced Plum Cake</button>
+          </div>
+
+          <div class="products-grid">
+            <!-- Bake 1: Celebration Cake -->
+            <article class="product-card reveal-on-scroll" data-category="cakes">
+              <div class="product-img-box">
+                <img src="assets/images/celebration_cake.jpg" alt="Custom Celebration Cakes" loading="lazy">
+                <div class="product-tags-row">
+                  <span class="badge-tag badge-gold">Centrepiece</span>
+                  <span class="badge-tag badge-gold">Custom Design</span>
+                </div>
+              </div>
+              <div class="product-body">
+                <h3 class="product-name">Celebration Cakes</h3>
+                <p class="product-desc">Multi-layered moist chocolate sponge dressed in velvety chocolate ganache,
+                  edible
+                  gold leaf, fresh berries, and macarons.</p>
+                <div class="product-footer">
+                  <div class="price-box">
+                    <span class="price-label">Pricing</span>
+                    <span class="price-text">Price on Request</span>
+                  </div>
+                  <button type="button" class="btn btn-gold btn-sm action-enquire-product"
+                    data-product-name="Celebration Cakes" data-product-category="Cakes">
+                    Customise & Enquire
+                  </button>
+                </div>
+              </div>
+            </article>
+
+            <!-- Bake 2: Cupcakes -->
+            <article class="product-card reveal-on-scroll reveal-delay-1" data-category="cupcakes">
+              <div class="product-img-box">
+                <img src="assets/images/cupcakes_muffins.jpg" alt="Signature Gourmet Cupcakes" loading="lazy">
+                <div class="product-tags-row">
+                  <span class="badge-tag badge-gold">Box of 6 / 12</span>
+                  <span class="badge-tag badge-gold">Party Favours</span>
+                </div>
+              </div>
+              <div class="product-body">
+                <h3 class="product-name">Gourmet Cupcakes</h3>
+                <p class="product-desc">Fluffy vanilla and chocolate cupcakes swirled with decadent chocolate
+                  buttercream
+                  and delicate chocolate curls.</p>
+                <div class="product-footer">
+                  <div class="price-box">
+                    <span class="price-label">Pricing</span>
+                    <span class="price-text">Price on Request</span>
+                  </div>
+                  <button type="button" class="btn btn-gold btn-sm action-enquire-product"
+                    data-product-name="Gourmet Cupcakes" data-product-category="Cupcakes">
+                    Customise & Enquire
+                  </button>
+                </div>
+              </div>
+            </article>
+
+            <!-- Bake 3: Muffins -->
+            <article class="product-card reveal-on-scroll reveal-delay-2" data-category="cupcakes">
+              <div class="product-img-box">
+                <img src="assets/images/cupcakes_muffins.jpg" alt="Fresh Baked Muffins" loading="lazy">
+                <div class="product-tags-row">
+                  <span class="badge-tag badge-gold">Breakfast Delight</span>
+                  <span class="badge-tag badge-gold">Blueberry & Choc</span>
+                </div>
+              </div>
+              <div class="product-body">
+                <h3 class="product-name">Bakery Muffins</h3>
+                <p class="product-desc">Wholesome, moist golden muffins bursting with juicy blueberries and dark
+                  chocolate
+                  chunks with a crunchy sugar crust.</p>
+                <div class="product-footer">
+                  <div class="price-box">
+                    <span class="price-label">Pricing</span>
+                    <span class="price-text">Price on Request</span>
+                  </div>
+                  <button type="button" class="btn btn-gold btn-sm action-enquire-product"
+                    data-product-name="Bakery Muffins" data-product-category="Muffins">
+                    Customise & Enquire
+                  </button>
+                </div>
+              </div>
+            </article>
+
+            <!-- Bake 4: Brownies -->
+            <article class="product-card reveal-on-scroll" data-category="brownies">
+              <div class="product-img-box">
+                <img src="assets/images/fudgy_brownies_cookies.jpg" alt="Rich Fudgy Chocolate Brownies"
+                  loading="lazy">
+                <div class="product-tags-row">
+                  <span class="badge-tag badge-gold">Super Fudgy</span>
+                  <span class="badge-tag badge-gold">Best Seller</span>
+                </div>
+              </div>
+              <div class="product-body">
+                <h3 class="product-name">Fudgy Brownies</h3>
+                <p class="product-desc">Decadently dense, crackly topped chocolate brownies made with pure melted dark
+                  chocolate and optional roasted walnuts.</p>
+                <div class="product-footer">
+                  <div class="price-box">
+                    <span class="price-label">Pricing</span>
+                    <span class="price-text">Price on Request</span>
+                  </div>
+                  <button type="button" class="btn btn-gold btn-sm action-enquire-product"
+                    data-product-name="Fudgy Brownies" data-product-category="Brownies">
+                    Customise & Enquire
+                  </button>
+                </div>
+              </div>
+            </article>
+
+            <!-- Bake 5: Cookies -->
+            <article class="product-card reveal-on-scroll reveal-delay-1" data-category="cookies">
+              <div class="product-img-box">
+                <img src="assets/images/fudgy_brownies_cookies.jpg" alt="Artisan Sea-Salt Cookies" loading="lazy">
+                <div class="product-tags-row">
+                  <span class="badge-tag badge-gold">Crisp & Chewy</span>
+                  <span class="badge-tag badge-gold">Sea Salt</span>
+                </div>
+              </div>
+              <div class="product-body">
+                <h3 class="product-name">Artisan Cookies</h3>
+                <p class="product-desc">Crisp golden edges with soft, chewy chocolate centers topped with flaky sea
+                  salt
+                  for an exquisite balance of sweet and savory.</p>
+                <div class="product-footer">
+                  <div class="price-box">
+                    <span class="price-label">Pricing</span>
+                    <span class="price-text">Price on Request</span>
+                  </div>
+                  <button type="button" class="btn btn-gold btn-sm action-enquire-product"
+                    data-product-name="Artisan Cookies" data-product-category="Cookies">
+                    Customise & Enquire
+                  </button>
+                </div>
+              </div>
+            </article>
+
+            <!-- Bake 6: Plum Cake -->
+            <article class="product-card reveal-on-scroll reveal-delay-2" data-category="plum-cake">
+              <div class="product-img-box">
+                <img src="assets/images/festive_plum_cake.jpg" alt="Traditional Rich Spiced Plum Cake" loading="lazy">
+                <div class="product-tags-row">
+                  <span class="badge-tag badge-gold">Festive Special</span>
+                  <span class="badge-tag badge-gold">Heritage Recipe</span>
+                </div>
+              </div>
+              <div class="product-body">
+                <h3 class="product-name">Spiced Plum Cake</h3>
+                <p class="product-desc">A rich dark festive fruitcake loaded with soaked premium dry fruits, candied
+                  peel,
+                  and warm spices, dusted with snowy sugar.</p>
+                <div class="product-footer">
+                  <div class="price-box">
+                    <span class="price-label">Pricing</span>
+                    <span class="price-text">Price on Request</span>
+                  </div>
+                  <button type="button" class="btn btn-gold btn-sm action-enquire-product"
+                    data-product-name="Spiced Plum Cake" data-product-category="Plum Cakes">
+                    Customise & Enquire
+                  </button>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ==========================================================================
          PAGE VIEW 3: CREATIONS (Categories, Occasions, Custom Order, Gallery)
          ========================================================================== -->
     <div class="page-view hidden-view" id="view-categories">
@@ -618,400 +854,7 @@
             </article>
           </div>
         </div>
-      </section>
-
-      <!-- ==========================================================================
-         PAGE VIEW 4: CHOCOLATES
-         ========================================================================== -->
-      <div class="page-view hidden-view" id="view-chocolates">
-        <section class="section-padding" id="chocolates" aria-labelledby="chocolates-heading">
-          <div class="container">
-            <div class="section-header reveal-on-scroll">
-              <div class="section-subtitle">Artisanal Chocolates</div>
-              <h2 class="section-title" id="chocolates-heading">
-                A Little Piece of <span class="text-gradient-gold">Happiness.</span>
-              </h2>
-              <p class="section-desc">
-                Handcrafted with the finest cocoa, pure butter, and loving craftsmanship. All chocolates are customized
-                to
-                your preferred cocoa intensity and packaging.
-              </p>
-            </div>
-
-            <!-- Category Filter Bar -->
-            <div class="category-filter-bar" data-filter-group="chocolates">
-              <button type="button" class="filter-btn active" data-filter="all">All Chocolates</button>
-              <button type="button" class="filter-btn" data-filter="assorted">Assorted Boxes</button>
-              <button type="button" class="filter-btn" data-filter="bars">Custom Bars</button>
-              <button type="button" class="filter-btn" data-filter="truffles">Hand-Rolled Truffles</button>
-              <button type="button" class="filter-btn" data-filter="personalised">Personalised</button>
-              <button type="button" class="filter-btn" data-filter="hampers">Festive Hampers</button>
-            </div>
-
-            <div class="products-grid">
-              <!-- Product 1 -->
-              <article class="product-card reveal-on-scroll" data-category="assorted">
-                <div class="product-img-box">
-                  <img src="assets/images/chocolate_truffles_box.jpg" alt="Assorted Handcrafted Chocolate Box"
-                    loading="lazy">
-                  <div class="product-tags-row">
-                    <span class="badge-tag badge-gold">Best Seller</span>
-                    <span class="badge-tag badge-gold">Assorted</span>
-                  </div>
-                </div>
-                <div class="product-body">
-                  <h3 class="product-name">Assorted Chocolate Box</h3>
-                  <p class="product-desc">An exquisite assortment of milk, dark, and white chocolate bonbons with nutty
-                    pralines, soft ganache, and golden dust.</p>
-                  <div class="product-footer">
-                    <div class="price-box">
-                      <span class="price-label">Pricing</span>
-                      <span class="price-text">Price on Request</span>
-                    </div>
-                    <button type="button" class="btn btn-gold btn-sm action-enquire-product"
-                      data-product-name="Assorted Chocolate Box" data-product-category="Chocolates">
-                      Customise & Enquire
-                    </button>
-                  </div>
-                </div>
-              </article>
-
-              <!-- Product 2 -->
-              <article class="product-card reveal-on-scroll reveal-delay-1" data-category="bars">
-                <div class="product-img-box">
-                  <img src="assets/images/custom_chocolate_bars.jpg" alt="Customised Artisanal Chocolate Bars"
-                    loading="lazy">
-                  <div class="product-tags-row">
-                    <span class="badge-tag badge-gold">Gourmet Slabs</span>
-                    <span class="badge-tag badge-gold">Custom Toppings</span>
-                  </div>
-                </div>
-                <div class="product-body">
-                  <h3 class="product-name">Custom Chocolate Bars</h3>
-                  <p class="product-desc">Hand-poured chocolate slabs embellished with roasted pistachios, edible dried
-                    rose
-                    petals, almonds, and sea-salt flakes.</p>
-                  <div class="product-footer">
-                    <div class="price-box">
-                      <span class="price-label">Pricing</span>
-                      <span class="price-text">Price on Request</span>
-                    </div>
-                    <button type="button" class="btn btn-gold btn-sm action-enquire-product"
-                      data-product-name="Custom Chocolate Bars" data-product-category="Chocolates">
-                      Customise & Enquire
-                    </button>
-                  </div>
-                </div>
-              </article>
-
-              <!-- Product 3 -->
-              <article class="product-card reveal-on-scroll reveal-delay-2" data-category="truffles">
-                <div class="product-img-box">
-                  <img src="assets/images/about_artisan_craft.jpg" alt="Artisanal Ganache Truffles" loading="lazy">
-                  <div class="product-tags-row">
-                    <span class="badge-tag badge-gold">Velvety Smooth</span>
-                    <span class="badge-tag badge-gold">Hand-Rolled</span>
-                  </div>
-                </div>
-                <div class="product-body">
-                  <h3 class="product-name">Chocolate Truffles</h3>
-                  <p class="product-desc">Velvety smooth melt-in-the-mouth cocoa truffles hand-rolled and dusted with
-                    premium cocoa powder and 24k edible gold flakes.</p>
-                  <div class="product-footer">
-                    <div class="price-box">
-                      <span class="price-label">Pricing</span>
-                      <span class="price-text">Price on Request</span>
-                    </div>
-                    <button type="button" class="btn btn-gold btn-sm action-enquire-product"
-                      data-product-name="Chocolate Truffles" data-product-category="Chocolates">
-                      Customise & Enquire
-                    </button>
-                  </div>
-                </div>
-              </article>
-
-              <!-- Product 4 -->
-              <article class="product-card reveal-on-scroll" data-category="assorted">
-                <div class="product-img-box">
-                  <img src="assets/images/chocolate_truffles_box.jpg" alt="Celebration Chocolate Box" loading="lazy">
-                  <div class="product-tags-row">
-                    <span class="badge-tag badge-gold">Milestone Box</span>
-                    <span class="badge-tag badge-gold">Themed</span>
-                  </div>
-                </div>
-                <div class="product-body">
-                  <h3 class="product-name">Celebration Chocolate Box</h3>
-                  <p class="product-desc">Specially curated celebration boxes containing themed chocolates with
-                    customized
-                    greetings or initials for your milestone event.</p>
-                  <div class="product-footer">
-                    <div class="price-box">
-                      <span class="price-label">Pricing</span>
-                      <span class="price-text">Price on Request</span>
-                    </div>
-                    <button type="button" class="btn btn-gold btn-sm action-enquire-product"
-                      data-product-name="Celebration Chocolate Box" data-product-category="Chocolates">
-                      Customise & Enquire
-                    </button>
-                  </div>
-                </div>
-              </article>
-
-              <!-- Product 5 -->
-              <article class="product-card reveal-on-scroll reveal-delay-1" data-category="personalised">
-                <div class="product-img-box">
-                  <img src="assets/images/custom_chocolate_bars.jpg" alt="Personalised Message Chocolates"
-                    loading="lazy">
-                  <div class="product-tags-row">
-                    <span class="badge-tag badge-gold">Custom Inscribed</span>
-                    <span class="badge-tag badge-gold">Return Gifts</span>
-                  </div>
-                </div>
-                <div class="product-body">
-                  <h3 class="product-name">Personalised Chocolates</h3>
-                  <p class="product-desc">Chocolates embossed with custom names, dates, or thoughtful messages crafted
-                    to
-                    express love and gratitude to guests.</p>
-                  <div class="product-footer">
-                    <div class="price-box">
-                      <span class="price-label">Pricing</span>
-                      <span class="price-text">Price on Request</span>
-                    </div>
-                    <button type="button" class="btn btn-gold btn-sm action-enquire-product"
-                      data-product-name="Personalised Chocolates" data-product-category="Chocolates">
-                      Customise & Enquire
-                    </button>
-                  </div>
-                </div>
-              </article>
-
-              <!-- Product 6 -->
-              <article class="product-card reveal-on-scroll reveal-delay-2" data-category="hampers">
-                <div class="product-img-box">
-                  <img src="assets/images/custom_gift_hamper.jpg" alt="Festival Chocolate Hampers" loading="lazy">
-                  <div class="product-tags-row">
-                    <span class="badge-tag badge-gold">Luxury Hamper</span>
-                    <span class="badge-tag badge-gold">Festive</span>
-                  </div>
-                </div>
-                <div class="product-body">
-                  <h3 class="product-name">Festival Chocolate Hampers</h3>
-                  <p class="product-desc">Grand festive gift boxes featuring festive-themed chocolates, roasted dry
-                    fruits,
-                    and artisanal treats packed with luxury ribbons.</p>
-                  <div class="product-footer">
-                    <div class="price-box">
-                      <span class="price-label">Pricing</span>
-                      <span class="price-text">Price on Request</span>
-                    </div>
-                    <button type="button" class="btn btn-gold btn-sm action-enquire-product"
-                      data-product-name="Festival Chocolate Hampers" data-product-category="Chocolates">
-                      Customise & Enquire
-                    </button>
-                  </div>
-                </div>
-              </article>
-            </div>
-          </div>
-        </section>
-      </div>
-
       <div class="section-divider" aria-hidden="true"></div>
-
-      <!-- ==========================================================================
-         PAGE VIEW 5: CAKES & BAKES
-         ========================================================================== -->
-      <div class="page-view hidden-view" id="view-cakes-bakes">
-        <section class="section-padding" id="cakes-bakes" aria-labelledby="bakes-heading">
-          <div class="container">
-            <div class="section-header reveal-on-scroll">
-              <div class="section-subtitle">Fresh From Our Oven</div>
-              <h2 class="section-title" id="bakes-heading">
-                Cakes & <span class="text-gradient-gold">Artisan Bakes</span>
-              </h2>
-              <p class="section-desc">
-                Baked to order with premium butter, fresh eggs or eggless options, and pure Belgian cocoa. Warmth you
-                can
-                taste in every single bite.
-              </p>
-            </div>
-
-            <!-- Category Filter Bar -->
-            <div class="category-filter-bar" data-filter-group="cakes-bakes">
-              <button type="button" class="filter-btn active" data-filter="all">All Bakes</button>
-              <button type="button" class="filter-btn" data-filter="cakes">Celebration Cakes</button>
-              <button type="button" class="filter-btn" data-filter="cupcakes">Cupcakes & Muffins</button>
-              <button type="button" class="filter-btn" data-filter="brownies">Fudgy Brownies</button>
-              <button type="button" class="filter-btn" data-filter="cookies">Artisan Cookies</button>
-              <button type="button" class="filter-btn" data-filter="plum-cake">Spiced Plum Cake</button>
-            </div>
-
-            <div class="products-grid">
-              <!-- Bake 1: Celebration Cake -->
-              <article class="product-card reveal-on-scroll" data-category="cakes">
-                <div class="product-img-box">
-                  <img src="assets/images/celebration_cake.jpg" alt="Custom Celebration Cakes" loading="lazy">
-                  <div class="product-tags-row">
-                    <span class="badge-tag badge-gold">Centrepiece</span>
-                    <span class="badge-tag badge-gold">Custom Design</span>
-                  </div>
-                </div>
-                <div class="product-body">
-                  <h3 class="product-name">Celebration Cakes</h3>
-                  <p class="product-desc">Multi-layered moist chocolate sponge dressed in velvety chocolate ganache,
-                    edible
-                    gold leaf, fresh berries, and macarons.</p>
-                  <div class="product-footer">
-                    <div class="price-box">
-                      <span class="price-label">Pricing</span>
-                      <span class="price-text">Price on Request</span>
-                    </div>
-                    <button type="button" class="btn btn-gold btn-sm action-enquire-product"
-                      data-product-name="Celebration Cakes" data-product-category="Cakes">
-                      Customise & Enquire
-                    </button>
-                  </div>
-                </div>
-              </article>
-
-              <!-- Bake 2: Cupcakes -->
-              <article class="product-card reveal-on-scroll reveal-delay-1" data-category="cupcakes">
-                <div class="product-img-box">
-                  <img src="assets/images/cupcakes_muffins.jpg" alt="Signature Gourmet Cupcakes" loading="lazy">
-                  <div class="product-tags-row">
-                    <span class="badge-tag badge-gold">Box of 6 / 12</span>
-                    <span class="badge-tag badge-gold">Party Favours</span>
-                  </div>
-                </div>
-                <div class="product-body">
-                  <h3 class="product-name">Gourmet Cupcakes</h3>
-                  <p class="product-desc">Fluffy vanilla and chocolate cupcakes swirled with decadent chocolate
-                    buttercream
-                    and delicate chocolate curls.</p>
-                  <div class="product-footer">
-                    <div class="price-box">
-                      <span class="price-label">Pricing</span>
-                      <span class="price-text">Price on Request</span>
-                    </div>
-                    <button type="button" class="btn btn-gold btn-sm action-enquire-product"
-                      data-product-name="Gourmet Cupcakes" data-product-category="Cupcakes">
-                      Customise & Enquire
-                    </button>
-                  </div>
-                </div>
-              </article>
-
-              <!-- Bake 3: Muffins -->
-              <article class="product-card reveal-on-scroll reveal-delay-2" data-category="cupcakes">
-                <div class="product-img-box">
-                  <img src="assets/images/cupcakes_muffins.jpg" alt="Fresh Baked Muffins" loading="lazy">
-                  <div class="product-tags-row">
-                    <span class="badge-tag badge-gold">Breakfast Delight</span>
-                    <span class="badge-tag badge-gold">Blueberry & Choc</span>
-                  </div>
-                </div>
-                <div class="product-body">
-                  <h3 class="product-name">Bakery Muffins</h3>
-                  <p class="product-desc">Wholesome, moist golden muffins bursting with juicy blueberries and dark
-                    chocolate
-                    chunks with a crunchy sugar crust.</p>
-                  <div class="product-footer">
-                    <div class="price-box">
-                      <span class="price-label">Pricing</span>
-                      <span class="price-text">Price on Request</span>
-                    </div>
-                    <button type="button" class="btn btn-gold btn-sm action-enquire-product"
-                      data-product-name="Bakery Muffins" data-product-category="Muffins">
-                      Customise & Enquire
-                    </button>
-                  </div>
-                </div>
-              </article>
-
-              <!-- Bake 4: Brownies -->
-              <article class="product-card reveal-on-scroll" data-category="brownies">
-                <div class="product-img-box">
-                  <img src="assets/images/fudgy_brownies_cookies.jpg" alt="Rich Fudgy Chocolate Brownies"
-                    loading="lazy">
-                  <div class="product-tags-row">
-                    <span class="badge-tag badge-gold">Super Fudgy</span>
-                    <span class="badge-tag badge-gold">Best Seller</span>
-                  </div>
-                </div>
-                <div class="product-body">
-                  <h3 class="product-name">Fudgy Brownies</h3>
-                  <p class="product-desc">Decadently dense, crackly topped chocolate brownies made with pure melted dark
-                    chocolate and optional roasted walnuts.</p>
-                  <div class="product-footer">
-                    <div class="price-box">
-                      <span class="price-label">Pricing</span>
-                      <span class="price-text">Price on Request</span>
-                    </div>
-                    <button type="button" class="btn btn-gold btn-sm action-enquire-product"
-                      data-product-name="Fudgy Brownies" data-product-category="Brownies">
-                      Customise & Enquire
-                    </button>
-                  </div>
-                </div>
-              </article>
-
-              <!-- Bake 5: Cookies -->
-              <article class="product-card reveal-on-scroll reveal-delay-1" data-category="cookies">
-                <div class="product-img-box">
-                  <img src="assets/images/fudgy_brownies_cookies.jpg" alt="Artisan Sea-Salt Cookies" loading="lazy">
-                  <div class="product-tags-row">
-                    <span class="badge-tag badge-gold">Crisp & Chewy</span>
-                    <span class="badge-tag badge-gold">Sea Salt</span>
-                  </div>
-                </div>
-                <div class="product-body">
-                  <h3 class="product-name">Artisan Cookies</h3>
-                  <p class="product-desc">Crisp golden edges with soft, chewy chocolate centers topped with flaky sea
-                    salt
-                    for an exquisite balance of sweet and savory.</p>
-                  <div class="product-footer">
-                    <div class="price-box">
-                      <span class="price-label">Pricing</span>
-                      <span class="price-text">Price on Request</span>
-                    </div>
-                    <button type="button" class="btn btn-gold btn-sm action-enquire-product"
-                      data-product-name="Artisan Cookies" data-product-category="Cookies">
-                      Customise & Enquire
-                    </button>
-                  </div>
-                </div>
-              </article>
-
-              <!-- Bake 6: Plum Cake -->
-              <article class="product-card reveal-on-scroll reveal-delay-2" data-category="plum-cake">
-                <div class="product-img-box">
-                  <img src="assets/images/festive_plum_cake.jpg" alt="Traditional Rich Spiced Plum Cake" loading="lazy">
-                  <div class="product-tags-row">
-                    <span class="badge-tag badge-gold">Festive Special</span>
-                    <span class="badge-tag badge-gold">Heritage Recipe</span>
-                  </div>
-                </div>
-                <div class="product-body">
-                  <h3 class="product-name">Spiced Plum Cake</h3>
-                  <p class="product-desc">A rich dark festive fruitcake loaded with soaked premium dry fruits, candied
-                    peel,
-                    and warm spices, dusted with snowy sugar.</p>
-                  <div class="product-footer">
-                    <div class="price-box">
-                      <span class="price-label">Pricing</span>
-                      <span class="price-text">Price on Request</span>
-                    </div>
-                    <button type="button" class="btn btn-gold btn-sm action-enquire-product"
-                      data-product-name="Spiced Plum Cake" data-product-category="Plum Cakes">
-                      Customise & Enquire
-                    </button>
-                  </div>
-                </div>
-              </article>
-            </div>
-          </div>
-        </section>
-      </div>
 
       <!-- ==========================================================================
          OCCASIONS EXPLORER
@@ -1063,6 +906,12 @@
                   <li>Decorated cupcake towers & party favours</li>
                   <li>Fudgy brownie bite boxes</li>
                 </ul>
+              </div>
+
+              <!-- Dynamic Matching Treats Showcase -->
+              <div class="occasion-matched-box">
+                <div class="occasion-treats-label">Matching Catalogue Treats:</div>
+                <div class="occasion-matched-chips" id="occasion-matched-chips"></div>
               </div>
 
               <button type="button" class="btn btn-gold" id="occasion-enquire-btn">
@@ -1132,56 +981,63 @@
       <!-- ==========================================================================
          HOW IT WORKS (4-STEP VISUAL PROCESS)
          ========================================================================== -->
-      <section class="section-padding" id="how-it-works" aria-labelledby="how-heading">
+      <section class="section-padding story-section" id="how-it-works" aria-labelledby="how-heading">
         <div class="container">
           <div class="section-header reveal-on-scroll">
-            <div class="section-subtitle">Simple & Seamless</div>
+            <div class="section-subtitle">Artisan Journey</div>
             <h2 class="section-title" id="how-heading">
-              How It <span class="text-gradient-gold">Works</span>
+              From Cocoa to <span class="text-gradient-gold">Celebration</span>
             </h2>
             <p class="section-desc">
-              Ordering homemade boutique treats is straightforward and personal every step of the way.
+              Follow the heartfelt handcrafted journey — from carefully selected origin cocoa and slow small-batch baking to bespoke customisation and unforgettable celebrations.
             </p>
           </div>
 
-          <div class="how-grid">
-            <!-- Step 01 -->
-            <div class="how-card reveal-on-scroll">
+          <!-- Interactive Story Timeline Track -->
+          <div class="story-timeline-track" aria-hidden="true">
+            <div class="story-timeline-line"></div>
+            <div class="story-timeline-fill" id="story-timeline-fill"></div>
+          </div>
+
+          <div class="how-grid story-grid">
+            <!-- Stage 01 -->
+            <div class="how-card story-card reveal-on-scroll" data-stage="1">
               <div class="how-step-badge">01</div>
-              <div class="how-icon-box">💡</div>
-              <h3 class="how-card-title">Tell Us Your Idea</h3>
-              <p class="how-card-desc">Share your celebration occasion, requirements, preferred treats, theme, and date
-                through our enquiry form or WhatsApp.</p>
+              <div class="story-stage-tag">STAGE 01 — SELECT</div>
+              <div class="how-icon-box story-icon-box">🌱</div>
+              <h3 class="how-card-title">Select Your Indulgence</h3>
+              <p class="how-card-desc">Choose your favourite chocolate notes (rich dark, smooth milk, creamy white), crunchy dry fruit inclusions, or artisan cakes & bakes.</p>
+              <div class="story-card-highlight">✦ Bespoke Palette & Flavours</div>
             </div>
 
-            <!-- Step 02 -->
-            <div class="how-card reveal-on-scroll reveal-delay-1">
+            <!-- Stage 02 -->
+            <div class="how-card story-card reveal-on-scroll reveal-delay-1" data-stage="2">
               <div class="how-step-badge">02</div>
-              <div class="how-icon-box">🍫</div>
-              <h3 class="how-card-title">We Handcraft With Care</h3>
-              <p class="how-card-desc">Your chocolates or baked treats are freshly prepared using premium ingredients
-                and
-                strict hygienic home-kitchen standards.</p>
+              <div class="story-stage-tag">STAGE 02 — CRAFT</div>
+              <div class="how-icon-box story-icon-box">🍫</div>
+              <h3 class="how-card-title">Handcrafted with Care</h3>
+              <p class="how-card-desc">Every single batch is melted, tempered, and freshly baked in small artisanal batches adhering to strict home hygiene and pure ingredients.</p>
+              <div class="story-card-highlight">✦ Slow-Batch Authenticity</div>
             </div>
 
-            <!-- Step 03 -->
-            <div class="how-card reveal-on-scroll reveal-delay-2">
+            <!-- Stage 03 -->
+            <div class="how-card story-card reveal-on-scroll reveal-delay-2" data-stage="3">
               <div class="how-step-badge">03</div>
-              <div class="how-icon-box">🎀</div>
-              <h3 class="how-card-title">We Customise & Pack</h3>
-              <p class="how-card-desc">Packaging, ribbons, greeting tags, and personal messages are carefully tailored
-                to
-                make your gifts look breathtaking.</p>
+              <div class="story-stage-tag">STAGE 03 — CUSTOMISE</div>
+              <div class="how-icon-box story-icon-box">✨</div>
+              <h3 class="how-card-title">Personalise & Theme</h3>
+              <p class="how-card-desc">Customise with name letters, festive themes (Diwali, Rakhi, Anniversaries), elegant hampers, and bespoke satin ribbons.</p>
+              <div class="story-card-highlight">✦ Tailored For Your Occasion</div>
             </div>
 
-            <!-- Step 04 -->
-            <div class="how-card reveal-on-scroll reveal-delay-3">
+            <!-- Stage 04 -->
+            <div class="how-card story-card reveal-on-scroll reveal-delay-3" data-stage="4">
               <div class="how-step-badge">04</div>
-              <div class="how-icon-box">🥳</div>
-              <h3 class="how-card-title">Sweet Moments Begin</h3>
-              <p class="how-card-desc">Your fresh order is safely prepared and handed over/delivered in perfect
-                condition
-                ready for your grand celebration.</p>
+              <div class="story-stage-tag">STAGE 04 — CELEBRATE</div>
+              <div class="how-icon-box story-icon-box">🎉</div>
+              <h3 class="how-card-title">Unbox & Celebrate</h3>
+              <p class="how-card-desc">Delivered or handed over in pristine, presentation-ready gift boxes, ready to spark joy and create sweet, lasting memories.</p>
+              <div class="story-card-highlight">✦ Moments Made Sweeter</div>
             </div>
           </div>
         </div>
@@ -1396,6 +1252,7 @@
 
       <!-- Lightbox Modal -->
       <div class="lightbox-modal" id="lightbox-modal" role="dialog" aria-modal="true" aria-label="Image Lightbox">
+        <div class="lightbox-counter" id="lightbox-counter">01 / 09</div>
         <button type="button" class="lightbox-close-btn" id="lightbox-close" aria-label="Close Lightbox">✕</button>
         <button type="button" class="lightbox-nav-btn lightbox-prev" id="lightbox-prev"
           aria-label="Previous Image">‹</button>
@@ -1713,19 +1570,33 @@
                   <div class="form-group">
                     <label for="enquiry-product" class="form-label">Product Interested In</label>
                     <select id="enquiry-product" name="product" class="form-control">
-                      <option value="Assorted Chocolate Box">Assorted Handcrafted Chocolate Box</option>
-                      <option value="Custom Chocolate Bars">Customised Artisanal Chocolate Bars</option>
-                      <option value="Chocolate Truffles">Artisanal Ganache Truffles</option>
-                      <option value="Celebration Chocolate Box">Celebration Chocolate Box</option>
-                      <option value="Personalised Chocolates">Personalised Message Chocolates</option>
-                      <option value="Festival Chocolate Hampers">Festival Chocolate Hampers</option>
-                      <option value="Celebration Cakes">Custom Celebration Cakes</option>
-                      <option value="Gourmet Cupcakes">Signature Gourmet Cupcakes</option>
-                      <option value="Bakery Muffins">Fresh Baked Bakery Muffins</option>
-                      <option value="Fudgy Brownies">Rich Fudgy Chocolate Brownies</option>
-                      <option value="Artisan Cookies">Sea-Salt Choc-Chunk Cookies</option>
-                      <option value="Spiced Plum Cake">Traditional Spiced Plum Cake</option>
-                      <option value="Multiple Treats / Custom Hamper">Multiple Treats / Custom Hamper</option>
+                      <optgroup label="Handcrafted Chocolates">
+                        <option value="Dark Chocolate">Dark Chocolate</option>
+                        <option value="Milk Chocolate">Milk Chocolate</option>
+                        <option value="White Chocolate">White Chocolate</option>
+                        <option value="Dry Fruit Chocolates">Dry Fruit Chocolates</option>
+                        <option value="Chocolate Bars">Chocolate Bars</option>
+                        <option value="Theme-Based Chocolates">Theme-Based Chocolates — Customisation</option>
+                        <option value="Corporate Chocolate Orders">Corporate Chocolate Orders</option>
+                        <option value="Chocolate Bouquets">Chocolate Bouquets</option>
+                        <option value="Dates & Almonds Chocolates">Dates & Almonds Chocolates</option>
+                        <option value="Bounty Bars">Bounty Bars</option>
+                        <option value="Tutti Fruity White Chocolates">Tutti Fruity White Chocolates</option>
+                        <option value="Wine-Shaped Chocolates">Wine-Shaped Chocolates</option>
+                        <option value="Occasion Hampers">Occasion Hampers</option>
+                        <option value="Flavoured Chocolates">Flavoured Chocolates</option>
+                      </optgroup>
+                      <optgroup label="Cakes & Fresh Bakes">
+                        <option value="Celebration Cakes">Custom Celebration Cakes</option>
+                        <option value="Gourmet Cupcakes">Signature Gourmet Cupcakes</option>
+                        <option value="Bakery Muffins">Fresh Baked Bakery Muffins</option>
+                        <option value="Fudgy Brownies">Rich Fudgy Chocolate Brownies</option>
+                        <option value="Artisan Cookies">Sea-Salt Choc-Chunk Cookies</option>
+                        <option value="Spiced Plum Cake">Traditional Spiced Plum Cake</option>
+                      </optgroup>
+                      <optgroup label="Custom Gifting">
+                        <option value="Multiple Treats / Custom Hamper">Multiple Treats / Custom Hamper</option>
+                      </optgroup>
                     </select>
                   </div>
 
@@ -1899,6 +1770,12 @@
     <span class="floating-whatsapp-pulse"></span>
     <span aria-hidden="true">💬</span>
   </a>
+
+  <!-- Floating Back to Top Button -->
+  <button type="button" class="floating-back-to-top" id="back-to-top-float" aria-label="Scroll back to top">
+    <span class="back-to-top-icon" aria-hidden="true">↑</span>
+    <span class="back-to-top-label">TOP</span>
+  </button>
 
   <!-- Scripts -->
   <script src="js/config.js"></script>
