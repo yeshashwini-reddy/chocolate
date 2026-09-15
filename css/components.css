@@ -210,6 +210,197 @@
   flex-shrink: 0;
 }
 
+/* ==========================================================================
+   DYNAMIC NAVBAR AUTHENTICATION CONTROLS & PROFILE DROPDOWN
+   ========================================================================== */
+
+.header-auth-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-auth-login {
+  font-size: 0.94rem;
+  font-weight: 500;
+  color: var(--gold-300);
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  transition: color var(--trans-fast), background-color var(--trans-fast);
+}
+
+.nav-auth-login:hover {
+  color: #ffffff;
+  background: rgba(212, 163, 115, 0.15);
+}
+
+.nav-auth-signup {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--gold-300);
+  text-decoration: none;
+  padding: 6px 16px;
+  border: 1px solid var(--border-gold-strong);
+  border-radius: 9999px;
+  background: rgba(212, 163, 115, 0.1);
+  transition: all var(--trans-fast);
+}
+
+.nav-auth-signup:hover {
+  color: #ffffff;
+  background: rgba(212, 163, 115, 0.25);
+  border-color: var(--gold-300);
+  transform: translateY(-1px);
+}
+
+/* Profile Dropdown Container */
+.profile-dropdown-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.nav-profile-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-gold-strong);
+  border-radius: 9999px;
+  color: var(--gold-300);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--trans-fast);
+  backdrop-filter: blur(10px);
+}
+
+.nav-profile-btn:hover,
+.profile-dropdown-wrap.open .nav-profile-btn {
+  background: rgba(212, 163, 115, 0.2);
+  border-color: var(--gold-300);
+  color: #ffffff;
+  box-shadow: 0 4px 15px rgba(212, 163, 115, 0.2);
+}
+
+.nav-profile-btn .user-avatar-icon {
+  font-size: 1.05rem;
+}
+
+.nav-profile-btn .dropdown-arrow {
+  font-size: 0.75rem;
+  transition: transform var(--trans-fast);
+}
+
+.profile-dropdown-wrap.open .nav-profile-btn .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+/* Profile Dropdown Card */
+.profile-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 240px;
+  background: rgba(25, 13, 9, 0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-gold-strong);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8), 0 0 25px rgba(212, 163, 115, 0.15);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px) scale(0.95);
+  transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
+  z-index: 1050;
+}
+
+.profile-dropdown-wrap.open .profile-dropdown-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+.profile-user-info {
+  margin-bottom: 12px;
+}
+
+.profile-user-name {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--gold-300);
+  margin-bottom: 2px;
+  word-break: break-word;
+}
+
+.profile-user-email {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+.profile-menu-divider {
+  height: 1px;
+  background: var(--border-gold);
+  margin: 12px 0;
+}
+
+.profile-logout-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(212, 163, 115, 0.12);
+  border: 1px solid rgba(212, 163, 115, 0.3);
+  border-radius: var(--radius-sm);
+  color: var(--text-cream);
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--trans-fast);
+}
+
+.profile-logout-btn:hover {
+  background: rgba(217, 83, 79, 0.25);
+  border-color: rgba(217, 83, 79, 0.6);
+  color: #ff9999;
+}
+
+/* Mobile Drawer Auth Styles */
+.mobile-user-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(21, 11, 8, 0.6);
+  padding: 12px;
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+}
+
+.mobile-profile-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobile-profile-name {
+  font-family: var(--font-serif);
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--gold-300);
+}
+
+.mobile-profile-email {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
 .header-cta {
   padding: 10px 22px;
   font-size: 0.92rem;

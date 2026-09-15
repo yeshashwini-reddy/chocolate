@@ -104,6 +104,8 @@
       this.updateNavbarUI();
       if (window.showToast) {
         window.showToast('Logged out successfully. 👋');
+      } else {
+        alert('Logged out successfully. 👋');
       }
     }
 
@@ -118,43 +120,89 @@
       const mobileAuthControls = document.getElementById('mobile-auth-controls');
 
       if (user) {
-        const firstName = user.name.split(' ')[0];
+        const firstName = user.name ? user.name.split(' ')[0] : 'User';
         const loggedInHTML = `
-          <div class="header-user-badge">
-            <span class="user-avatar-icon">👤</span>
-            <span class="header-user-name">${this.escapeHtml(firstName)}</span>
+          <div class="profile-dropdown-wrap" id="profile-dropdown-wrap">
+            <button type="button" class="nav-profile-btn" id="nav-profile-toggle" aria-expanded="false" aria-label="User Profile Menu">
+              <span class="user-avatar-icon">👤</span>
+              <span class="nav-profile-label">Profile</span>
+              <span class="dropdown-arrow">▾</span>
+            </button>
+            <div class="profile-dropdown-menu" id="profile-dropdown-menu">
+              <div class="profile-user-info">
+                <div class="profile-user-name">${this.escapeHtml(user.name || firstName)}</div>
+                <div class="profile-user-email">${this.escapeHtml(user.email || '')}</div>
+              </div>
+              <div class="profile-menu-divider"></div>
+              <button type="button" class="profile-logout-btn" id="btn-profile-logout">
+                <span>🚪 Logout</span>
+              </button>
+            </div>
           </div>
-          <button type="button" class="btn-nav-logout" id="btn-logout-header">Logout</button>
         `;
 
         const mobileLoggedInHTML = `
           <div class="mobile-user-box">
-            <span class="header-user-badge">
-              <span class="user-avatar-icon">👤</span>
-              <span>${this.escapeHtml(user.name)}</span>
-            </span>
-            <button type="button" class="btn-nav-logout" id="btn-logout-mobile">Logout</button>
+            <div class="mobile-profile-info">
+              <span class="user-avatar-icon" style="font-size: 1.3rem;">👤</span>
+              <div>
+                <div class="mobile-profile-name">${this.escapeHtml(user.name)}</div>
+                <div class="mobile-profile-email">${this.escapeHtml(user.email)}</div>
+              </div>
+            </div>
+            <button type="button" class="profile-logout-btn" id="btn-logout-mobile" style="margin-top: 10px;">
+              <span>🚪 Logout</span>
+            </button>
           </div>
         `;
 
         if (headerAuthControls) headerAuthControls.innerHTML = loggedInHTML;
         if (mobileAuthControls) mobileAuthControls.innerHTML = mobileLoggedInHTML;
 
-        // Bind logout handlers
-        const btnLogoutHeader = document.getElementById('btn-logout-header');
-        const btnLogoutMobile = document.getElementById('btn-logout-mobile');
-        if (btnLogoutHeader) btnLogoutHeader.addEventListener('click', () => this.logout());
-        if (btnLogoutMobile) btnLogoutMobile.addEventListener('click', () => this.logout());
+        // Profile Dropdown Toggle Logic
+        const wrap = document.getElementById('profile-dropdown-wrap');
+        const toggleBtn = document.getElementById('nav-profile-toggle');
+        const logoutBtn = document.getElementById('btn-profile-logout');
+        const mobileLogoutBtn = document.getElementById('btn-logout-mobile');
+
+        if (toggleBtn && wrap) {
+          toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = wrap.classList.toggle('open');
+            toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+          });
+        }
+
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (wrap) wrap.classList.remove('open');
+            this.logout();
+          });
+        }
+
+        if (mobileLogoutBtn) {
+          mobileLogoutBtn.addEventListener('click', () => this.logout());
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+          if (wrap && !wrap.contains(e.target)) {
+            wrap.classList.remove('open');
+            if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
+          }
+        });
+
       } else {
         const loggedOutHTML = `
-          <a href="login.html?tab=login" class="btn-nav-login">Login</a>
-          <a href="login.html?tab=signup" class="btn-nav-signup">Sign Up</a>
+          <a href="login.html?tab=login" class="nav-auth-login">Login</a>
+          <a href="login.html?tab=signup" class="nav-auth-signup">Sign Up</a>
         `;
 
         const mobileLoggedOutHTML = `
-          <div class="mobile-auth-buttons">
-            <a href="login.html?tab=login" class="btn btn-outline" style="flex: 1; text-align: center;">Login</a>
-            <a href="login.html?tab=signup" class="btn btn-gold" style="flex: 1; text-align: center;">Sign Up</a>
+          <div class="mobile-auth-buttons" style="display: flex; gap: 10px; margin-bottom: 12px;">
+            <a href="login.html?tab=login" class="btn btn-outline" style="flex: 1; text-align: center; padding: 8px 12px; font-size: 0.88rem;">Login</a>
+            <a href="login.html?tab=signup" class="btn btn-gold" style="flex: 1; text-align: center; padding: 8px 12px; font-size: 0.88rem;">Sign Up</a>
           </div>
         `;
 
@@ -164,6 +212,7 @@
     }
 
     escapeHtml(str) {
+      if (!str) return '';
       return String(str)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -174,6 +223,15 @@
 
   const authInstance = new AuthSystem();
   window.AuthSystem = authInstance;
+
+  // Public Helper Functions as Required
+  window.updateNavbarAuthState = function () {
+    authInstance.updateNavbarUI();
+  };
+
+  window.handleLogout = function () {
+    authInstance.logout();
+  };
 
   // Protected Action Helper
   window.requireAuthOrRedirect = function (redirectHash = '#contact') {

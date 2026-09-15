@@ -275,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update active nav link highlighting
     allNavLinks.forEach(link => {
       const href = link.getAttribute('href');
-      if (!href || href.startsWith('login.html')) return;
+      if (!href) return;
 
       if (href === cleanHash || (cleanHash === '' && href === '#home')) {
         link.classList.add('active');
