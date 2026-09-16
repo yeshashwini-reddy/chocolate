@@ -1,0 +1,655 @@
+/**
+ * MADHURI'S CHOCO HEAVEN - CENTRAL BRAND & BUSINESS CONFIGURATION
+ * Ported directly from js/config.js with 100% fidelity.
+ */
+
+export const BRAND_CONFIG = {
+  name: "Madhuri’s Choco Heaven 🍫❤️",
+  shortName: "Madhuri’s Choco Heaven",
+  tagline: "Where every celebration becomes a little sweeter!",
+  brandMessage: "🍫 Homemade • 🎂 Freshly Baked • 🎁 Customised • ❤️ Made with Love",
+  subtitle: "Handcrafted chocolates, freshly baked treats and customised creations made with love for your most special moments.",
+  
+  contact: {
+    whatsappNumber: "YOUR_WHATSAPP_NUMBER",
+    phoneNumber: "YOUR_PHONE_NUMBER",
+    email: "YOUR_EMAIL_ADDRESS",
+    location: "Handcrafted with love at our Home Boutique Studio",
+    operatingHours: "Orders accepted 7 days a week (Pre-orders recommended)"
+  },
+
+  social: {
+    instagram: "YOUR_INSTAGRAM_URL",
+    facebook: "YOUR_FACEBOOK_URL",
+    whatsappLink: "https://wa.me/YOUR_WHATSAPP_NUMBER"
+  },
+
+  categories: [
+    {
+      id: "chocolates",
+      title: "Handcrafted Chocolates",
+      icon: "🍫",
+      desc: "Custom chocolates made specially for your occasion with premium cocoa.",
+      image: "assets/images/chocolate_truffles_box.jpg",
+      badge: "Artisanal • Customisable",
+      link: "#chocolates"
+    },
+    {
+      id: "cakes",
+      title: "Cakes & Celebration Cakes",
+      icon: "🎂",
+      desc: "Freshly baked cakes crafted to elevate birthdays, weddings & special milestones.",
+      image: "assets/images/celebration_cake.jpg",
+      badge: "Freshly Baked",
+      link: "#cakes-bakes"
+    },
+    {
+      id: "cupcakes",
+      title: "Cupcakes & Muffins",
+      icon: "🧁",
+      desc: "Soft, pillowy & beautifully piped gourmet treats perfect for parties.",
+      image: "assets/images/cupcakes_muffins.jpg",
+      badge: "Party Favours",
+      link: "#cakes-bakes"
+    },
+    {
+      id: "brownies",
+      title: "Brownies & Cookies",
+      icon: "🍪",
+      desc: "Rich fudgy brownies and artisan sea-salt cookies baked to sweet perfection.",
+      image: "assets/images/fudgy_brownies_cookies.jpg",
+      badge: "Decadent Bakes",
+      link: "#cakes-bakes"
+    },
+    {
+      id: "gifts",
+      title: "Customised Gifts & Hampers",
+      icon: "🎁",
+      desc: "Personalised chocolate gift boxes and return gifts for memorable occasions.",
+      image: "assets/images/custom_gift_hamper.jpg",
+      badge: "Celebration Special",
+      link: "#custom-order"
+    }
+  ],
+
+  chocolates: [
+    {
+      id: "dark-chocolate",
+      name: "Dark Chocolate",
+      category: "classic",
+      categoryLabel: "Classic Chocolates",
+      desc: "Rich handcrafted dark chocolate made for those who love a deeper cocoa experience.",
+      priceTag: "Price on Request",
+      actionText: "Customise & Enquire",
+      image: "assets/images/chocolates/dark-chocolate.jpg",
+      tags: ["Pure Cocoa", "Deep Cocoa"],
+      type: "standard"
+    },
+    {
+      id: "milk-chocolate",
+      name: "Milk Chocolate",
+      category: "classic",
+      categoryLabel: "Classic Chocolates",
+      desc: "Smooth, creamy handcrafted milk chocolate for a classic sweet indulgence.",
+      priceTag: "Price on Request",
+      actionText: "Customise & Enquire",
+      image: "assets/images/chocolates/milk-chocolate.jpg",
+      tags: ["Smooth & Creamy", "Classic Sweet"],
+      type: "standard"
+    },
+    {
+      id: "white-chocolate",
+      name: "White Chocolate",
+      category: "classic",
+      categoryLabel: "Classic Chocolates",
+      desc: "Delicate and creamy white chocolate crafted for a sweet, luxurious treat.",
+      priceTag: "Price on Request",
+      actionText: "Customise & Enquire",
+      image: "assets/images/chocolates/white-chocolate.jpg",
+      tags: ["Velvety Ivory", "Luxurious Treat"],
+      type: "standard"
+    },
+    {
+      id: "dry-fruit-chocolates",
+      name: "Dry Fruit Chocolates",
+      category: "classic",
+      categoryLabel: "Classic Chocolates",
+      desc: "Handcrafted chocolates paired with delicious dry fruits for a satisfying bite.",
+      priceTag: "Price on Request",
+      actionText: "Customise & Enquire",
+      image: "assets/images/chocolates/dry-fruit-chocolate.jpg",
+      tags: ["Roasted Dry Fruits", "Nutty Crunch"],
+      type: "standard"
+    },
+    {
+      id: "chocolate-bars",
+      name: "Chocolate Bars",
+      category: "classic",
+      categoryLabel: "Classic Chocolates",
+      desc: "Beautifully crafted chocolate bars made for gifting or enjoying yourself.",
+      priceTag: "Price on Request",
+      actionText: "Customise & Enquire",
+      image: "assets/images/chocolates/chocolate-bars.jpg",
+      tags: ["Artisanal Slabs", "Gourmet Bars"],
+      type: "standard"
+    },
+    {
+      id: "theme-based-chocolates",
+      name: "Theme-Based Chocolates — Customisation",
+      shortName: "Theme-Based Chocolates",
+      category: "customised",
+      categoryLabel: "Customised",
+      desc: "Customised chocolates designed around your celebration, theme and occasion.",
+      priceTag: "Price on Request",
+      actionText: "Create Your Theme",
+      image: "assets/images/chocolates/theme-chocolates.jpg",
+      tags: ["Personalised", "Custom Celebration"],
+      type: "theme",
+      isProminent: true,
+      badge: "PERSONALISED",
+      supportedOccasions: [
+        "Rakhi",
+        "Diwali",
+        "Birthday",
+        "Christmas",
+        "Anniversary",
+        "Ganesh Chaturthi"
+      ]
+    },
+    {
+      id: "corporate-orders",
+      name: "Corporate Chocolate Orders",
+      shortName: "Corporate Orders",
+      category: "customised",
+      categoryLabel: "Customised",
+      desc: "Customised chocolates featuring your company's logo or branding, perfect for corporate gifting and special events.",
+      priceTag: "Price on Request",
+      actionText: "Enquire for Corporate Orders",
+      image: "assets/images/chocolates/corporate-chocolates.jpg",
+      tags: ["Company Branding", "Executive Gifting"],
+      type: "corporate",
+      isProminent: true,
+      badge: "CORPORATE SPECIALIST",
+      brandingPlaceholder: "Placeholder area for company branding/logo integration"
+    },
+    {
+      id: "chocolate-bouquets",
+      name: "Chocolate Bouquets",
+      category: "gifting",
+      categoryLabel: "Gifting",
+      desc: "A beautiful bouquet-style arrangement made with delicious chocolates.",
+      priceTag: "Price on Request",
+      actionText: "Customise Your Bouquet",
+      image: "assets/images/chocolates/chocolate-bouquet.jpg",
+      tags: ["Decorative Arrangement", "Celebration Gift"],
+      type: "bouquet",
+      isProminent: true,
+      badge: "GIFTING SPECIAL"
+    },
+    {
+      id: "dates-almonds-chocolates",
+      name: "Dates & Almonds Chocolates",
+      category: "specialty",
+      categoryLabel: "Specialty",
+      desc: "A handcrafted combination of dates, almonds and chocolate.",
+      priceTag: "Price on Request",
+      actionText: "Customise & Enquire",
+      image: "assets/images/chocolates/dates-almond-chocolates.jpg",
+      tags: ["Stuffed Dates", "Whole Almonds"],
+      type: "standard"
+    },
+    {
+      id: "bounty-bars",
+      name: "Bounty Bars",
+      category: "specialty",
+      categoryLabel: "Specialty",
+      desc: "Chocolate treats inspired by the classic coconut-and-chocolate combination.",
+      priceTag: "Price on Request",
+      actionText: "Customise & Enquire",
+      image: "assets/images/chocolates/bounty-bars.jpg",
+      tags: ["Moist Coconut", "Classic Pair"],
+      type: "standard"
+    },
+    {
+      id: "tutti-fruity-white-chocolates",
+      name: "Tutti Fruity White Chocolates",
+      category: "specialty",
+      categoryLabel: "Specialty",
+      desc: "Creamy white chocolates combined with colourful tutti-fruity pieces.",
+      priceTag: "Price on Request",
+      actionText: "Customise & Enquire",
+      image: "assets/images/chocolates/tutti-fruity-white-chocolate.jpg",
+      tags: ["Colourful Gems", "Creamy White"],
+      type: "standard"
+    },
+    {
+      id: "wine-shaped-chocolates",
+      name: "Wine-Shaped Chocolates",
+      category: "specialty",
+      categoryLabel: "Specialty",
+      desc: "Creative chocolates crafted in elegant wine-inspired shapes.",
+      priceTag: "Price on Request",
+      actionText: "Customise & Enquire",
+      image: "assets/images/chocolates/wine-shaped-chocolates.jpg",
+      tags: ["Novelty Shapes", "Gourmet Confection"],
+      type: "standard"
+    },
+    {
+      id: "occasion-hampers",
+      name: "Occasion Hampers",
+      category: "gifting",
+      categoryLabel: "Gifting",
+      desc: "Thoughtfully arranged chocolate hampers created for special occasions and celebrations.",
+      priceTag: "Price on Request",
+      actionText: "Create a Hamper",
+      image: "assets/images/chocolates/occasion-hampers.jpg",
+      tags: ["Curated Box", "Grand Hampers"],
+      type: "hamper",
+      isProminent: true,
+      badge: "BESPOKE HAMPER"
+    },
+    {
+      id: "flavoured-chocolates",
+      name: "Flavoured Chocolates",
+      category: "flavoured",
+      categoryLabel: "Flavoured",
+      desc: "Explore handcrafted chocolates in a selection of delicious flavours.",
+      priceTag: "Price on Request",
+      actionText: "Customise & Enquire",
+      image: "assets/images/chocolates/flavoured-chocolates.jpg",
+      tags: ["6 Artisan Flavours", "Select Your Flavour"],
+      type: "flavoured",
+      badge: "FLAVOUR SELECTION",
+      flavours: [
+        { name: "Orange", emoji: "🍊", label: "Orange" },
+        { name: "Mango", emoji: "🥭", label: "Mango" },
+        { name: "Strawberry", emoji: "🍓", label: "Strawberry" },
+        { name: "Pista", emoji: "🌰", label: "Pista" },
+        { name: "Pan", emoji: "🌿", label: "Pan" },
+        { name: "Rasmalai", emoji: "🍮", label: "Rasmalai" }
+      ]
+    }
+  ],
+
+  cakesAndBakes: [
+    {
+      id: "celebration-cake",
+      name: "Custom Celebration Cakes",
+      desc: "Multi-layered moist chocolate sponge dressed in velvety chocolate ganache, edible gold leaf, fresh berries, and macarons.",
+      priceTag: "Price on Request",
+      actionText: "Customise & Enquire",
+      category: "cakes",
+      categoryLabel: "Cakes",
+      image: "assets/images/celebration_cake.jpg",
+      tags: ["Centrepiece", "Custom Design"]
+    },
+    {
+      id: "gourmet-cupcakes",
+      name: "Signature Gourmet Cupcakes",
+      desc: "Fluffy vanilla and chocolate cupcakes swirled with decadent chocolate buttercream and delicate chocolate curls.",
+      priceTag: "Price on Request",
+      actionText: "Customise & Enquire",
+      category: "cupcakes",
+      categoryLabel: "Cupcakes",
+      image: "assets/images/cupcakes_muffins.jpg",
+      tags: ["Box of 6 / 12", "Party Favours"]
+    },
+    {
+      id: "bakery-muffins",
+      name: "Bakery Muffins",
+      desc: "Wholesome, moist golden muffins bursting with juicy blueberries and dark chocolate chunks with a crunchy sugar crust.",
+      priceTag: "Price on Request",
+      actionText: "Customise & Enquire",
+      category: "cupcakes",
+      categoryLabel: "Muffins",
+      image: "assets/images/cupcakes_muffins.jpg",
+      tags: ["Breakfast Delight", "Blueberry & Choc"]
+    },
+    {
+      id: "fudgy-brownies",
+      name: "Fudgy Brownies",
+      desc: "Decadently dense, crackly topped chocolate brownies made with pure melted dark chocolate and optional roasted walnuts.",
+      priceTag: "Price on Request",
+      actionText: "Customise & Enquire",
+      category: "brownies",
+      categoryLabel: "Brownies",
+      image: "assets/images/fudgy_brownies_cookies.jpg",
+      tags: ["Super Fudgy", "Best Seller"]
+    },
+    {
+      id: "sea-salt-cookies",
+      name: "Artisan Cookies",
+      desc: "Crisp golden edges with soft, chewy chocolate centers topped with flaky sea salt for an exquisite balance of sweet and savory.",
+      priceTag: "Price on Request",
+      actionText: "Customise & Enquire",
+      category: "cookies",
+      categoryLabel: "Cookies",
+      image: "assets/images/fudgy_brownies_cookies.jpg",
+      tags: ["Crisp & Chewy", "Sea Salt"]
+    },
+    {
+      id: "plum-cake",
+      name: "Spiced Plum Cake",
+      desc: "A rich dark festive fruitcake loaded with soaked premium dry fruits, candied peel, and warm spices, dusted with snowy sugar.",
+      priceTag: "Price on Request",
+      actionText: "Customise & Enquire",
+      category: "plum-cake",
+      categoryLabel: "Plum Cakes",
+      image: "assets/images/festive_plum_cake.jpg",
+      tags: ["Festive Special", "Heritage Recipe"]
+    }
+  ],
+
+  occasions: [
+    {
+      id: "birthdays",
+      icon: "🎂",
+      name: "Birthdays",
+      tagline: "“Celebrate another sweet year of joy!”",
+      treats: [
+        "Birthday chocolate boxes with custom age/name",
+        "Celebration theme cakes & tier cakes",
+        "Decorated cupcake towers & party favours",
+        "Fudgy brownie bite boxes"
+      ],
+      description: "From intimate family birthdays to grand milestone celebrations, our handcrafted cakes and custom chocolates make birthday smiles wider."
+    },
+    {
+      id: "weddings",
+      icon: "💍",
+      name: "Weddings",
+      tagline: "“Pure elegance for the beginning of forever”",
+      treats: [
+        "Luxury wedding chocolate boxes with couple initials",
+        "Elegant wedding return gift hampers",
+        "Custom bonbon flavours matching wedding theme",
+        "Tiered chocolate ganache display cakes"
+      ],
+      description: "Delight your guests with couture chocolate gift boxes wrapped in satin ribbons, crafted to match your wedding color theme."
+    },
+    {
+      id: "anniversaries",
+      icon: "❤️",
+      name: "Anniversaries",
+      tagline: "“Celebrating love, one delicious bite at a time”",
+      treats: [
+        "Romantic truffle boxes with edible gold leaf",
+        "Heart-shaped chocolates and custom messages",
+        "Gourmet brownie and chocolate lovers hamper",
+        "Romantic duo celebration cakes"
+      ],
+      description: "Express your heart with romantic handcrafted chocolates made with passion and personalized love notes."
+    },
+    {
+      id: "baby-showers",
+      icon: "👶",
+      name: "Baby Showers",
+      tagline: "“Welcoming sweet new beginnings”",
+      treats: [
+        "Pastel-themed baby shower cupcakes",
+        "Personalised chocolate bars with announcement cards",
+        "Cute mini chocolate return gifts for guests",
+        "Celebration fruit & sponge cakes"
+      ],
+      description: "Celebrate the arrival of your little miracle with charming pastel-themed chocolates, cupcakes, and customized baby shower favors."
+    },
+    {
+      id: "festivals",
+      icon: "🎉",
+      name: "Festivals",
+      tagline: "“Sweeten festive traditions with artisanal touches”",
+      treats: [
+        "Diwali & Rakhi handcrafted chocolate hampers",
+        "Christmas festive spiced plum cakes",
+        "New Year celebration assorted chocolate boxes",
+        "Dry fruit filled artisanal chocolate bars"
+      ],
+      description: "Elevate your festive gifting with artisanal homemade hampers that bring warmth and sweetness to every relative and friend."
+    },
+    {
+      id: "return-gifts",
+      icon: "🎁",
+      name: "Return Gifts",
+      tagline: "“Memorable favours your guests will truly savour”",
+      treats: [
+        "Individually boxed custom chocolate duos and trios",
+        "Personalised thank-you message chocolate sleeves",
+        "Mini brownie boxes with custom ribbon tags",
+        "Budget-friendly to luxury return gift options"
+      ],
+      description: "Leave a lasting impression with beautifully wrapped homemade treats tailored for your guests to take home."
+    },
+    {
+      id: "corporate",
+      icon: "🏢",
+      name: "Corporate Gifting",
+      tagline: "“Professional excellence with warm artisanal flair”",
+      treats: [
+        "Branded packaging with company greetings",
+        "Gourmet assorted truffle executive gift boxes",
+        "Festival celebration employee hampers",
+        "Client appreciation confectionery packages"
+      ],
+      description: "Say thank you to clients, partners, and teams with premium handcrafted chocolates that reflect prestige and care."
+    },
+    {
+      id: "special-celebrations",
+      icon: "✨",
+      name: "Special Celebrations",
+      tagline: "“Housewarmings, graduations, achievements & get-togethers”",
+      treats: [
+        "Congratulatory chocolate gift hampers",
+        "Party dessert table platters (cupcakes & brownies)",
+        "Assorted cookie gift jars",
+        "Custom message chocolate plaques"
+      ],
+      description: "Whatever you are celebrating, our homemade treats are customized to make your moment unforgettable."
+    }
+  ],
+
+  howItWorks: [
+    {
+      step: "01",
+      stageTag: "STAGE 01 — SELECT",
+      title: "Select Your Indulgence",
+      desc: "Choose your favourite chocolate notes (rich dark, smooth milk, creamy white), crunchy dry fruit inclusions, or artisan cakes & bakes.",
+      highlight: "✦ Bespoke Palette & Flavours",
+      icon: "🌱"
+    },
+    {
+      step: "02",
+      stageTag: "STAGE 02 — CRAFT",
+      title: "Handcrafted with Care",
+      desc: "Every single batch is melted, tempered, and freshly baked in small artisanal batches adhering to strict home hygiene and pure ingredients.",
+      highlight: "✦ Slow-Batch Authenticity",
+      icon: "🍫"
+    },
+    {
+      step: "03",
+      stageTag: "STAGE 03 — CUSTOMISE",
+      title: "Personalise & Theme",
+      desc: "Customise with name letters, festive themes (Diwali, Rakhi, Anniversaries), elegant hampers, and bespoke satin ribbons.",
+      highlight: "✦ Tailored For Your Occasion",
+      icon: "✨"
+    },
+    {
+      step: "04",
+      stageTag: "STAGE 04 — CELEBRATE",
+      title: "Unbox & Celebrate",
+      desc: "Delivered or handed over in pristine, presentation-ready gift boxes, ready to spark joy and create sweet, lasting memories.",
+      highlight: "✦ Moments Made Sweeter",
+      icon: "🎉"
+    }
+  ],
+
+  whyChooseUs: [
+    {
+      icon: "❤️",
+      title: "Made With Love",
+      desc: "Every chocolate and bake is created with personal warmth and homemade care that commercial brands cannot replicate."
+    },
+    {
+      icon: "🍫",
+      title: "100% Handcrafted",
+      desc: "Artisanal hand-tempered chocolates made in small batches to preserve taste, texture, and velvety richness."
+    },
+    {
+      icon: "🎂",
+      title: "Freshly Baked on Order",
+      desc: "We never sell pre-stored items. Every cake, cupcake, muffin, and brownie is baked fresh specifically for your order."
+    },
+    {
+      icon: "🎁",
+      title: "Tailored Customisation",
+      desc: "From ribbons and custom labels to bespoke flavours and dietary requirements, your wish is our recipe."
+    },
+    {
+      icon: "✨",
+      title: "Perfect For Every Occasion",
+      desc: "Curated collections for birthdays, weddings, baby showers, festive hampers, and memorable return gifts."
+    },
+    {
+      icon: "🌟",
+      title: "Hygienic & Premium Ingredients",
+      desc: "Prepared in an impeccably clean home kitchen using top-grade cocoa, pure butter, and fresh wholesome ingredients."
+    }
+  ],
+
+  gallery: [
+    {
+      id: "gal-1",
+      title: "Assorted Gold Leaf Truffle Collection",
+      shortTitle: "Gold Leaf Truffles",
+      category: "chocolates",
+      categoryLabel: "Handcrafted Chocolates",
+      image: "assets/images/chocolate_truffles_box.jpg",
+      caption: "Handcrafted truffles dusted with 24k gold leaf and pistachio pearls in a luxury gift box.",
+      shortCaption: "Luxury assortment with roasted pistachios"
+    },
+    {
+      id: "gal-2",
+      title: "Tiered Chocolate Velvet Celebration Cake",
+      shortTitle: "Celebration Tier Cake",
+      category: "cakes",
+      categoryLabel: "Cakes & Bakes",
+      image: "assets/images/celebration_cake.jpg",
+      caption: "Two-tiered chocolate ganache celebration cake with fresh berries and macarons.",
+      shortCaption: "Dripping ganache with fresh berries"
+    },
+    {
+      id: "gal-3",
+      title: "Artisanal Chocolate Bar Trio",
+      shortTitle: "Artisan Bar Trio",
+      category: "chocolates",
+      categoryLabel: "Handcrafted Chocolates",
+      image: "assets/images/custom_chocolate_bars.jpg",
+      caption: "Rose pistachio dark chocolate, hazelnut milk chocolate, and raspberry white chocolate.",
+      shortCaption: "Gourmet inclusions and gold foil wrappers"
+    },
+    {
+      id: "gal-4",
+      title: "Grand Celebration Gift Hamper",
+      shortTitle: "Celebration Hamper",
+      category: "gifts",
+      categoryLabel: "Gift Hampers",
+      image: "assets/images/custom_gift_hamper.jpg",
+      caption: "Opulent hamper basket packed with chocolate boxes, brownies, gourmet jars, and personalized card.",
+      shortCaption: "Wicker hamper with gold satin ribbon"
+    },
+    {
+      id: "gal-5",
+      title: "Gourmet Frosted Cupcakes & Muffins",
+      shortTitle: "Frosted Cupcakes",
+      category: "cakes",
+      categoryLabel: "Cakes & Bakes",
+      image: "assets/images/cupcakes_muffins.jpg",
+      caption: "Swirled chocolate ganache cupcakes and freshly baked golden blueberry muffins.",
+      shortCaption: "Velvety ganache and blueberry muffins"
+    },
+    {
+      id: "gal-6",
+      title: "Fudgy Walnut Brownies & Chewy Cookies",
+      shortTitle: "Brownies & Cookies",
+      category: "cakes",
+      categoryLabel: "Cakes & Bakes",
+      image: "assets/images/fudgy_brownies_cookies.jpg",
+      caption: "Rich fudgy chocolate brownies paired with artisanal sea-salt chocolate chunk cookies.",
+      shortCaption: "Crackly crust and gooey centers"
+    },
+    {
+      id: "gal-7",
+      title: "Hand-Rolled Ganache Cocoa Truffles",
+      shortTitle: "Hand-Rolled Truffles",
+      category: "chocolates",
+      categoryLabel: "Handcrafted Chocolates",
+      image: "assets/images/about_artisan_craft.jpg",
+      caption: "Handcrafted in small batches, dusted with cocoa powder and cinnamon essence.",
+      shortCaption: "Artisanal tempering and dusting"
+    },
+    {
+      id: "gal-8",
+      title: "Festive Spiced Holiday Plum Cake",
+      shortTitle: "Spiced Plum Cake",
+      category: "cakes",
+      categoryLabel: "Cakes & Bakes",
+      image: "assets/images/festive_plum_cake.jpg",
+      caption: "Traditional rich plum cake loaded with soaked dry fruits, star anise, and cinnamon.",
+      shortCaption: "Rich heritage recipe for festive season"
+    },
+    {
+      id: "gal-9",
+      title: "Artisan Chocolate Boutique Spread",
+      shortTitle: "Boutique Spread",
+      category: "chocolates",
+      categoryLabel: "Handcrafted Chocolates",
+      image: "assets/images/hero_chocolate_spread.jpg",
+      caption: "A celebratory spread of homemade dark chocolate barks, bonbons, and celebration slices.",
+      shortCaption: "Celebration chocolate barks and bonbons"
+    }
+  ],
+
+  testimonials: [
+    {
+      id: "t-1",
+      name: "Sneha & Rahul M.",
+      occasion: "Wedding Return Gifts (120 Boxes)",
+      rating: 5,
+      quote: "“Beautifully made chocolates and the packaging was absolutely lovely! Every single wedding guest complimented the taste and presentation. Madhuri was so cooperative with our custom color theme.”"
+    },
+    {
+      id: "t-2",
+      name: "Pooja K.",
+      occasion: "Daughter's 5th Birthday Party",
+      rating: 5,
+      quote: "“The chocolate drip cake and matching cupcakes were the star of the party! So fresh, moist, and not overly sweet. The kids and adults both loved it. Definitely our go-to family baker now!”"
+    },
+    {
+      id: "t-3",
+      name: "Vikram S.",
+      occasion: "Diwali Corporate Hampers",
+      rating: 5,
+      quote: "“We ordered customized chocolate hampers for our key clients. The handcrafted finish, personalized greeting, and pure quality made an unforgettable impression. Exceptional professionalism!”"
+    },
+    {
+      id: "t-4",
+      name: "Ananya R.",
+      occasion: "First Wedding Anniversary",
+      rating: 5,
+      quote: "“Ordered an assorted dark chocolate truffle box with our initials embossed. The texture was velvety smooth and melted in the mouth. It made our anniversary celebration truly special!”"
+    }
+  ],
+
+  socialPosts: [
+    { image: "assets/images/chocolate_truffles_box.jpg", tag: "#ChocoHeavenTruffles" },
+    { image: "assets/images/celebration_cake.jpg", tag: "#CelebrationCakes" },
+    { image: "assets/images/custom_chocolate_bars.jpg", tag: "#ArtisanBars" },
+    { image: "assets/images/cupcakes_muffins.jpg", tag: "#FreshBakes" },
+    { image: "assets/images/fudgy_brownies_cookies.jpg", tag: "#FudgyBrownies" },
+    { image: "assets/images/custom_gift_hamper.jpg", tag: "#GiftHampers" }
+  ]
+};
+
+// Also expose globally on window for backwards compatibility if needed
+if (typeof window !== "undefined") {
+  window.BRAND_CONFIG = BRAND_CONFIG;
+}

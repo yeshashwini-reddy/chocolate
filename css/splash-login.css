@@ -599,3 +599,216 @@
   }
 }
 
+/* ==========================================================================
+   4. TWO-COLUMN SPLIT AUTHENTICATION PAGE LAYOUT
+   ========================================================================== */
+
+.auth-page-section {
+  min-height: calc(100vh - var(--header-height, 80px));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--header-height, 80px) + 36px) 20px 60px 20px;
+  position: relative;
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(212, 163, 115, 0.18) 0%, rgba(21, 11, 8, 0.98) 75%),
+    radial-gradient(circle at 20% 80%, rgba(77, 46, 35, 0.4) 0%, transparent 50%),
+    #150b08;
+}
+
+/* TWO-COLUMN AUTH CONTAINER */
+.auth-split-card {
+  position: relative;
+  width: 100%;
+  max-width: 980px;
+  display: grid;
+  grid-template-columns: 1fr 1.05fr;
+  background: rgba(30, 16, 11, 0.94);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border-gold-strong);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 
+    0 35px 80px rgba(0, 0, 0, 0.85),
+    0 0 50px rgba(212, 163, 115, 0.15);
+  animation: loginCardEntrance 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* LEFT BRANDED PANEL */
+.auth-brand-panel {
+  position: relative;
+  padding: 48px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: 
+    linear-gradient(135deg, rgba(21, 11, 8, 0.88) 0%, rgba(35, 19, 13, 0.94) 100%),
+    url('../assets/images/hero_chocolate_spread.jpg') center/cover no-repeat;
+  border-right: 1px solid var(--border-gold);
+}
+
+.auth-brand-header {
+  margin-bottom: 32px;
+}
+
+.auth-brand-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  text-decoration: none;
+  margin-bottom: 24px;
+}
+
+.auth-brand-logo img {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));
+}
+
+.auth-brand-tagline {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gold-300);
+  line-height: 1.35;
+  margin-bottom: 12px;
+}
+
+.auth-brand-desc {
+  font-size: 0.94rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* BENEFIT HIGHLIGHT CARDS */
+.auth-benefits-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+.auth-benefit-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  background: rgba(21, 11, 8, 0.65);
+  border: 1px solid rgba(212, 163, 115, 0.25);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(8px);
+  transition: border-color var(--trans-fast), transform var(--trans-fast);
+}
+
+.auth-benefit-item:hover {
+  border-color: var(--gold-400);
+  transform: translateX(4px);
+}
+
+.auth-benefit-icon {
+  font-size: 1.1rem;
+  color: var(--gold-400);
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.auth-benefit-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-cream);
+  margin-bottom: 2px;
+}
+
+.auth-benefit-sub {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.auth-brand-footer-text {
+  font-size: 0.84rem;
+  color: var(--gold-400);
+  letter-spacing: 0.5px;
+}
+
+/* RIGHT FORM PANEL */
+.auth-form-panel {
+  padding: 48px 42px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.auth-title-large {
+  font-family: var(--font-serif);
+  font-size: 1.9rem;
+  font-weight: 700;
+  color: var(--gold-300);
+  margin-bottom: 6px;
+}
+
+.auth-subtitle-text {
+  font-size: 0.94rem;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.auth-link-forgot {
+  font-size: 0.84rem;
+  color: var(--gold-400);
+  text-decoration: underline;
+  float: right;
+  cursor: pointer;
+}
+
+.auth-link-forgot:hover {
+  color: var(--gold-300);
+}
+
+.auth-footer-prompt {
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.auth-guest-link {
+  display: block;
+  text-align: center;
+  margin-top: 18px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  text-decoration: underline;
+  transition: color var(--trans-fast);
+}
+
+.auth-guest-link:hover {
+  color: var(--gold-400);
+}
+
+/* RESPONSIVE STACKING FOR MOBILE & TABLET */
+@media (max-width: 860px) {
+  .auth-split-card {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+  }
+  .auth-brand-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border-gold);
+    padding: 32px 24px;
+  }
+  .auth-form-panel {
+    padding: 36px 24px;
+  }
+  .auth-brand-tagline {
+    font-size: 1.3rem;
+  }
+}
+
+
