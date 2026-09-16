@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import EmailOtpVerification from './EmailOtpVerification';
 
 export default function LoginView({ onNavigate, initialTab = 'login' }) {
   const { user, login, signup, logout } = useAuth();
   const [activeTab, setActiveTab] = useState(initialTab);
   const [showPassword, setShowPassword] = useState(false);
+  const [pendingOtpEmail, setPendingOtpEmail] = useState(() => {
+    return sessionStorage.getItem('mch_pending_otp_email') || '';
+  });
 
   // Form states
   const [loginEmail, setLoginEmail] = useState('');
@@ -40,6 +44,12 @@ export default function LoginView({ onNavigate, initialTab = 'login' }) {
     setIsLoading(false);
 
     if (!res.success) {
+      if (res.message && res.message.toLowerCase().includes('email not confirmed')) {
+        const clean = loginEmail.trim().toLowerCase();
+        setPendingOtpEmail(clean);
+        sessionStorage.setItem('mch_pending_otp_email', clean);
+        return;
+      }
       setLoginError(`⚠️ ${res.message}`);
     } else {
       const role = res.role || 'user';
@@ -66,6 +76,24 @@ export default function LoginView({ onNavigate, initialTab = 'login' }) {
 
     if (!res.success) {
       setSignupError(`⚠️ ${res.message}`);
+    } else {
+      // Transition immediately to dedicated Email OTP Verification screen
+      const targetEmail = res.email || signupEmail.trim().toLowerCase();
+      setPendingOtpEmail(targetEmail);
+      sessionStorage.setItem('mch_pending_otp_email', targetEmail);
+    }
+  };
+
+  const handleOtpSuccess = (role) => {
+    sessionStorage.removeItem('mch_pending_otp_email');
+    setPendingOtpEmail('');
+
+    if (role === 'admin') {
+      if (onNavigate) onNavigate('#admin');
+      else window.location.hash = '#admin';
+    } else if (role === 'owner') {
+      if (onNavigate) onNavigate('#owner');
+      else window.location.hash = '#owner';
     } else {
       if (onNavigate) onNavigate('#home');
       else window.location.hash = '#home';
@@ -191,6 +219,21 @@ export default function LoginView({ onNavigate, initialTab = 'login' }) {
                   </button>
                 </div>
               </div>
+            ) : pendingOtpEmail ? (
+              <EmailOtpVerification
+                email={pendingOtpEmail}
+                onVerified={handleOtpSuccess}
+                onBackToSignup={() => {
+                  sessionStorage.removeItem('mch_pending_otp_email');
+                  setPendingOtpEmail('');
+                  setActiveTab('signup');
+                }}
+                onGoToLogin={() => {
+                  sessionStorage.removeItem('mch_pending_otp_email');
+                  setPendingOtpEmail('');
+                  setActiveTab('login');
+                }}
+              />
             ) : (
               <>
                 {/* Auth Tabs (Login / Sign Up) */}

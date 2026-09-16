@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 
-const LOCAL_USERS_KEY = 'mch_users';
-const LOCAL_CURRENT_USER_KEY = 'mch_current_user';
 const LOCAL_ORDERS_KEY = 'mch_orders';
 
 const AuthContext = createContext(null);
@@ -11,34 +10,85 @@ export function AuthProvider({ children }) {
   const [orders, setOrders] = useState([]);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize test users & check session on mount
-  useEffect(() => {
+  // Helper to load user profile from public.profiles
+  const loadUserProfile = async (authUser) => {
+    if (!authUser) return null;
     try {
-      if (!localStorage.getItem(LOCAL_USERS_KEY)) {
-        const defaultUsers = [
-          { name: 'Yeshashwini reddy', email: 'yeshaswinireddy32@gmail.com', password: 'password123', role: 'user' },
-          { name: 'Customer User', email: 'user@test.com', password: 'password123', role: 'user' },
-          { name: 'Store Admin', email: 'admin@test.com', password: 'password123', role: 'admin' },
-          { name: 'Business Owner', email: 'owner@test.com', password: 'password123', role: 'owner' }
-        ];
-        localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(defaultUsers));
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, phone, role')
+        .eq('id', authUser.id)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('[Supabase] Could not fetch profile:', error.message);
       }
 
-      const storedUser = localStorage.getItem(LOCAL_CURRENT_USER_KEY);
-      if (storedUser) {
-        const parsed = JSON.parse(storedUser);
-        if (parsed.email === 'yeshaswinireddy32@gmail.com' && (!parsed.name || parsed.name === 'yeshaswinireddy32')) {
-          parsed.name = 'Yeshashwini reddy';
-          localStorage.setItem(LOCAL_CURRENT_USER_KEY, JSON.stringify(parsed));
+      const fullName = profile?.full_name 
+        || authUser.user_metadata?.full_name 
+        || authUser.user_metadata?.name 
+        || (authUser.email ? authUser.email.split('@')[0] : 'Customer');
+
+      const resolvedUser = {
+        id: authUser.id,
+        name: fullName,
+        email: profile?.email || authUser.email,
+        phone: profile?.phone || authUser.user_metadata?.phone || null,
+        role: profile?.role || 'user'
+      };
+
+      setUser(resolvedUser);
+      return resolvedUser;
+    } catch (err) {
+      console.warn('[Supabase] Error resolving profile:', err);
+      const fallbackUser = {
+        id: authUser.id,
+        name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Customer',
+        email: authUser.email,
+        phone: authUser.user_metadata?.phone || null,
+        role: 'user'
+      };
+      setUser(fallbackUser);
+      return fallbackUser;
+    }
+  };
+
+  // Check Supabase session on mount & subscribe to real-time auth changes
+  useEffect(() => {
+    let isMounted = true;
+
+    // 1. Fetch current active session (restores session on page refresh)
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!isMounted) return;
+      if (session?.user) {
+        await loadUserProfile(session.user);
+      } else {
+        setUser(null);
+      }
+      setIsInitialized(true);
+    }).catch((err) => {
+      console.warn('[Supabase] Session retrieval failed:', err);
+      if (isMounted) setIsInitialized(true);
+    });
+
+    // 2. Subscribe to auth state changes (sign in, sign out, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        if (session?.user) {
+          await loadUserProfile(session.user);
         }
-        setUser(parsed);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
       }
+    });
 
+    // 3. Load persisted local orders
+    try {
       const storedOrders = localStorage.getItem(LOCAL_ORDERS_KEY);
       if (storedOrders) {
         setOrders(JSON.parse(storedOrders));
       } else {
-        // Sample orders for demo
         const defaultOrders = [
           {
             id: 'ord-1',
@@ -71,16 +121,20 @@ export function AuthProvider({ children }) {
         setOrders(defaultOrders);
       }
     } catch (e) {
-      console.warn('Auth initialization error:', e);
-    } finally {
-      setIsInitialized(true);
+      console.warn('Orders initialization error:', e);
     }
+
+    return () => {
+      isMounted = false;
+      subscription?.unsubscribe();
+    };
   }, []);
 
   const validateEmail = (email) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
+  // Real Supabase Auth Login
   const login = async (email, password) => {
     const cleanEmail = email ? email.trim().toLowerCase() : '';
     const cleanPass = password || '';
@@ -93,50 +147,33 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      const users = JSON.parse(localStorage.getItem(LOCAL_USERS_KEY) || '[]');
-      let matchedUser = users.find(u => u.email === cleanEmail);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: cleanPass
+      });
 
-      if (!matchedUser && cleanPass.length >= 6) {
-        let role = 'user';
-        if (cleanEmail.includes('admin')) role = 'admin';
-        if (cleanEmail.includes('owner')) role = 'owner';
-
-        const defaultName = cleanEmail === 'yeshaswinireddy32@gmail.com' ? 'Yeshashwini reddy' : cleanEmail.split('@')[0];
-        matchedUser = {
-          id: 'local_' + Date.now(),
-          name: defaultName,
-          email: cleanEmail,
-          password: cleanPass,
-          role
-        };
-        users.push(matchedUser);
-        localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(users));
+      if (error) {
+        return { success: false, message: error.message };
       }
 
-      if (!matchedUser || matchedUser.password !== cleanPass) {
+      if (!data?.user) {
         return { success: false, message: 'Invalid email or password.' };
       }
 
-      const userName = (matchedUser.email === 'yeshaswinireddy32@gmail.com' && (!matchedUser.name || matchedUser.name === 'yeshaswinireddy32'))
-        ? 'Yeshashwini reddy'
-        : matchedUser.name;
+      const resolvedUser = await loadUserProfile(data.user);
 
-      const sessionUser = {
-        id: matchedUser.id || 'local_user',
-        name: userName,
-        email: matchedUser.email,
-        role: matchedUser.role || 'user'
+      return {
+        success: true,
+        user: resolvedUser,
+        role: resolvedUser?.role || 'user',
+        session: data.session
       };
-
-      localStorage.setItem(LOCAL_CURRENT_USER_KEY, JSON.stringify(sessionUser));
-      setUser(sessionUser);
-
-      return { success: true, user: sessionUser, role: sessionUser.role };
     } catch (err) {
       return { success: false, message: err.message || 'Login failed.' };
     }
   };
 
+  // Real Supabase Auth Signup (Triggers confirmation OTP email)
   const signup = async (name, email, password, confirmPassword) => {
     const cleanName = name ? name.trim() : '';
     const cleanEmail = email ? email.trim().toLowerCase() : '';
@@ -149,39 +186,114 @@ export function AuthProvider({ children }) {
     if (cleanPass !== cleanConfirm) return { success: false, message: 'Passwords do not match.' };
 
     try {
-      const users = JSON.parse(localStorage.getItem(LOCAL_USERS_KEY) || '[]');
-      if (users.some(u => u.email === cleanEmail)) {
+      const { data, error } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password: cleanPass,
+        options: {
+          data: {
+            full_name: cleanName
+          }
+        }
+      });
+
+      if (error) {
+        return { success: false, message: error.message };
+      }
+
+      // Check if user already exists (Supabase security feature: empty identities array)
+      if (data?.user?.identities && data.user.identities.length === 0) {
         return { success: false, message: 'An account with this email already exists.' };
       }
 
-      const newUser = {
-        id: 'local_' + Date.now(),
-        name: cleanName,
+      if (!data?.user) {
+        return { success: false, message: 'Signup failed. Please try again.' };
+      }
+
+      // Email confirmation OTP is pending; do not establish verified session yet!
+      return {
+        success: true,
         email: cleanEmail,
-        password: cleanPass,
-        role: 'user'
+        user: data.user,
+        requiresOtpVerification: true
       };
-      users.push(newUser);
-      localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(users));
-
-      const sessionUser = {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        role: 'user'
-      };
-      localStorage.setItem(LOCAL_CURRENT_USER_KEY, JSON.stringify(sessionUser));
-      setUser(sessionUser);
-
-      return { success: true, user: sessionUser, role: 'user' };
     } catch (err) {
       return { success: false, message: err.message || 'Signup failed.' };
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem(LOCAL_CURRENT_USER_KEY);
+  // Real Supabase Auth OTP Verification
+  const verifyOtp = async (email, token) => {
+    const cleanEmail = email ? email.trim().toLowerCase() : '';
+    const cleanToken = token ? token.trim() : '';
+
+    if (!cleanEmail) {
+      return { success: false, message: 'Email address is required.' };
+    }
+    if (!cleanToken || cleanToken.length !== 6) {
+      return { success: false, message: 'Please enter a valid 6-digit verification code.' };
+    }
+
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: cleanEmail,
+        token: cleanToken,
+        type: 'email'
+      });
+
+      if (error) {
+        return { success: false, message: error.message || 'Invalid or expired verification code.' };
+      }
+
+      if (!data?.user) {
+        return { success: false, message: 'Verification could not be completed. Please try again.' };
+      }
+
+      // Establish authenticated session and fetch user profile from public.profiles
+      const resolvedUser = await loadUserProfile(data.user);
+
+      return {
+        success: true,
+        user: resolvedUser,
+        role: resolvedUser?.role || 'user',
+        session: data.session
+      };
+    } catch (err) {
+      return { success: false, message: err.message || 'Verification failed. Please try again.' };
+    }
+  };
+
+  // Real Supabase Auth Resend OTP
+  const resendOtp = async (email) => {
+    const cleanEmail = email ? email.trim().toLowerCase() : '';
+    if (!cleanEmail) {
+      return { success: false, message: 'Email address is required.' };
+    }
+
+    try {
+      const { data, error } = await supabase.auth.resend({
+        type: 'signup',
+        email: cleanEmail
+      });
+
+      if (error) {
+        return { success: false, message: error.message || 'Failed to resend verification code. Please try again.' };
+      }
+
+      return { success: true, message: 'Verification code resent successfully.' };
+    } catch (err) {
+      return { success: false, message: err.message || 'Failed to resend verification code.' };
+    }
+  };
+
+  // Real Supabase Auth Logout
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.warn('[Supabase] SignOut error:', err);
+    } finally {
+      setUser(null);
+    }
   };
 
   const createOrder = (orderData) => {
@@ -219,6 +331,8 @@ export function AuthProvider({ children }) {
       isInitialized,
       login,
       signup,
+      verifyOtp,
+      resendOtp,
       logout,
       orders,
       createOrder,
