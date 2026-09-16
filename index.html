@@ -69,10 +69,6 @@
   <!-- Top Scroll Progress Indicator -->
   <div class="scroll-progress-bar" id="scroll-progress-bar" aria-hidden="true"></div>
 
-  <!-- Luxury Custom Cursor (Desktop Only) -->
-  <div class="custom-cursor-dot" id="custom-cursor-dot" aria-hidden="true"></div>
-  <div class="custom-cursor-ring" id="custom-cursor-ring" aria-hidden="true"></div>
-
   <!-- ==========================================================================
        CINEMATIC ANIMATED SPLASH / OPENING SCREEN
        ========================================================================== -->
@@ -271,8 +267,6 @@
         <a href="#about" class="nav-link">About</a>
         <a href="#chocolates" class="nav-link">Chocolates</a>
         <a href="#cakes-bakes" class="nav-link">Cakes & Bakes</a>
-        <a href="#occasions" class="nav-link">Occasions</a>
-        <a href="#gallery" class="nav-link">Gallery</a>
         <a href="#contact" class="nav-link">Contact</a>
       </nav>
 
@@ -1776,7 +1770,22 @@
     <span class="back-to-top-label">TOP</span>
   </button>
 
+  <!-- Customer Order History Modal -->
+  <div class="dialog-overlay" id="order-history-modal" aria-hidden="true">
+    <div class="dialog-card" style="max-width: 650px; width: 92%; max-height: 85vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-gold-strong); padding-bottom: 14px; margin-bottom: 18px;">
+        <h3 style="font-family: var(--font-serif); color: var(--gold-300); margin: 0; font-size: 1.4rem;">📦 My Order History</h3>
+        <button type="button" id="close-order-history-modal" class="dialog-close-btn" style="background: none; border: none; color: var(--gold-400); font-size: 1.5rem; cursor: pointer;">✕</button>
+      </div>
+      <div id="order-history-content">
+        <div style="text-align: center; color: var(--text-muted); padding: 20px;">Loading your orders...</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/testimonials.js"></script>

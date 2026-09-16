@@ -820,13 +820,36 @@ _Sent via Madhuri’s Choco Heaven Website_`
 
   // Standard Form Submit
   if (enquiryForm) {
-    enquiryForm.addEventListener('submit', (e) => {
+    enquiryForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const data = getFormData();
       if (!validateForm(data)) return;
 
-      // Show confirmation modal
       const refNumber = 'MCH-' + Math.floor(100000 + Math.random() * 900000);
+
+      // Save order to Supabase if configured
+      if (window.MCH_SUPABASE && window.MCH_SUPABASE.isConfigured() && window.MCH_SUPABASE.client) {
+        try {
+          const user = window.AuthSystem ? await window.AuthSystem.getCurrentUser() : null;
+          const supabase = window.MCH_SUPABASE.client;
+          await supabase.from('orders').insert({
+            order_number: refNumber,
+            user_id: user ? user.id : null,
+            customer_name: data.name,
+            customer_email: data.email,
+            customer_phone: data.phone,
+            category: data.category,
+            preferred_date: data.date || null,
+            quantity: data.quantity || 'Standard',
+            custom_message: data.message || '',
+            status: 'pending',
+            total_amount: 0.00
+          });
+        } catch (err) {
+          console.warn('Could not save order to Supabase:', err);
+        }
+      }
+
       const refElem = document.getElementById('dialog-ref-number');
       if (refElem) refElem.textContent = refNumber;
 
@@ -835,6 +858,99 @@ _Sent via Madhuri’s Choco Heaven Website_`
       }
 
       enquiryForm.reset();
+    });
+  }
+
+  // Customer Order History Modal Logic
+  window.openOrderHistoryModal = async function () {
+    const modal = document.getElementById('order-history-modal');
+    const container = document.getElementById('order-history-content');
+    if (!modal || !container) return;
+
+    modal.classList.add('open');
+    container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 30px;">Loading your orders... 🍫</div>';
+
+    const user = window.AuthSystem ? await window.AuthSystem.getCurrentUser() : null;
+    if (!user) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 20px;">
+          <p style="color: var(--text-muted); margin-bottom: 14px;">Please login to view your order history.</p>
+          <a href="login.html" class="btn btn-gold btn-sm">Login Now</a>
+        </div>`;
+      return;
+    }
+
+    if (window.MCH_SUPABASE && window.MCH_SUPABASE.isConfigured() && window.MCH_SUPABASE.client) {
+      try {
+        const supabase = window.MCH_SUPABASE.client;
+        const { data: orders, error } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (!orders || orders.length === 0) {
+          container.innerHTML = `
+            <div style="text-align: center; padding: 30px 10px;">
+              <div style="font-size: 2.2rem; margin-bottom: 10px;">🧾</div>
+              <p style="color: var(--gold-300); font-weight: 600; font-size: 1.05rem; margin-bottom: 6px;">No orders found yet</p>
+              <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 18px;">Place your first order using the Custom Order enquiry form!</p>
+              <a href="#custom-order" onclick="document.getElementById('order-history-modal').classList.remove('open')" class="btn btn-gold btn-sm">Order Now</a>
+            </div>`;
+          return;
+        }
+
+        let html = '<div style="display: flex; flex-direction: column; gap: 14px;">';
+        orders.forEach(ord => {
+          const statusStyles = {
+            pending: 'background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4);',
+            processing: 'background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4);',
+            completed: 'background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4);',
+            cancelled: 'background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4);'
+          };
+          const style = statusStyles[ord.status] || statusStyles.pending;
+          const formattedDate = ord.created_at ? new Date(ord.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+
+          html += `
+            <div style="background: rgba(21, 11, 8, 0.7); border: 1px solid var(--border-gold); border-radius: var(--radius-md); padding: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <div>
+                  <span style="font-weight: 700; color: var(--gold-300); font-size: 1.05rem;">${ord.order_number}</span>
+                  <span style="font-size: 0.8rem; color: var(--text-dim); margin-left: 10px;">${formattedDate}</span>
+                </div>
+                <span style="padding: 2px 10px; border-radius: 12px; font-size: 0.76rem; font-weight: 700; text-transform: uppercase; ${style}">
+                  ${ord.status}
+                </span>
+              </div>
+              <div style="font-size: 0.9rem; color: var(--text-cream); margin-bottom: 4px;"><strong>Category:</strong> ${ord.category || 'General'}</div>
+              <div style="font-size: 0.86rem; color: var(--text-muted); margin-bottom: 4px;"><strong>Quantity / Option:</strong> ${ord.quantity || 'Standard'}</div>
+              ${ord.preferred_date ? `<div style="font-size: 0.86rem; color: var(--text-muted); margin-bottom: 4px;"><strong>Preferred Date:</strong> ${ord.preferred_date}</div>` : ''}
+              ${ord.custom_message ? `<div style="font-size: 0.84rem; color: var(--text-dim); font-style: italic; margin-top: 6px; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">"${ord.custom_message}"</div>` : ''}
+            </div>
+          `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+      } catch (err) {
+        console.error('Failed to load order history:', err);
+        container.innerHTML = '<div style="color: #f87171; text-align: center; padding: 20px;">Failed to load order history.</div>';
+      }
+    } else {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 20px;">
+          <p style="color: var(--text-muted);">Supabase is not configured yet. Orders placed will appear here once database connection is configured.</p>
+        </div>`;
+    }
+  };
+
+  const closeHistoryBtn = document.getElementById('close-order-history-modal');
+  const historyModal = document.getElementById('order-history-modal');
+  if (closeHistoryBtn && historyModal) {
+    closeHistoryBtn.addEventListener('click', () => historyModal.classList.remove('open'));
+    historyModal.addEventListener('click', (e) => {
+      if (e.target === historyModal) historyModal.classList.remove('open');
     });
   }
 
@@ -959,93 +1075,14 @@ _Sent via Madhuri’s Choco Heaven Website_`
     storyCards.forEach(card => storyObserver.observe(card));
   }
 
-  // ==========================================================================
-  // 11. LUXURY CUSTOM CURSOR (DESKTOP WITH FINE POINTER ONLY)
-  // ==========================================================================
-  const isFinePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  if (isFinePointer && !prefersReducedMotion) {
-    const cursorDot = document.getElementById('custom-cursor-dot');
-    const cursorRing = document.getElementById('custom-cursor-ring');
-
-    if (cursorDot && cursorRing) {
-      let mouseX = -100;
-      let mouseY = -100;
-      let ringX = -100;
-      let ringY = -100;
-      let isVisible = false;
-      let isAnimating = false;
-
-      function renderCursor() {
-        if (!isVisible) {
-          isAnimating = false;
-          return;
-        }
-        // Smooth lerp (linear interpolation) for ring
-        ringX += (mouseX - ringX) * 0.16;
-        ringY += (mouseY - ringY) * 0.16;
-
-        cursorDot.style.left = `${mouseX}px`;
-        cursorDot.style.top = `${mouseY}px`;
-        cursorRing.style.left = `${ringX}px`;
-        cursorRing.style.top = `${ringY}px`;
-
-        requestAnimationFrame(renderCursor);
-      }
-
-      window.addEventListener('mousemove', (e) => {
-        mouseX = e.clientX;
-        mouseY = e.clientY;
-        if (!isVisible) {
-          isVisible = true;
-          cursorDot.style.opacity = '1';
-          cursorRing.style.opacity = '1';
-          if (!isAnimating) {
-            isAnimating = true;
-            requestAnimationFrame(renderCursor);
-          }
-        }
-      }, { passive: true });
-
-      // Interactive hover states on clickable elements
-      const interactiveSelector = 'a, button, input, select, textarea, .product-card, .category-card, .gallery-item, .story-card, .flavour-pill, .occasion-btn, .occasion-chip';
-
-      document.addEventListener('mouseover', (e) => {
-        if (e.target.closest(interactiveSelector)) {
-          cursorRing.classList.add('cursor-hover');
-        }
-      }, { passive: true });
-
-      document.addEventListener('mouseout', (e) => {
-        if (e.target.closest(interactiveSelector)) {
-          cursorRing.classList.remove('cursor-hover');
-        }
-      }, { passive: true });
-
-      document.addEventListener('mousedown', () => {
-        cursorRing.classList.add('cursor-active');
-      });
-
-      document.addEventListener('mouseup', () => {
-        cursorRing.classList.remove('cursor-active');
-      });
-
-      document.addEventListener('mouseleave', () => {
-        cursorDot.classList.add('custom-cursor-hidden');
-        cursorRing.classList.add('custom-cursor-hidden');
-      });
-
-      document.addEventListener('mouseenter', () => {
-        cursorDot.classList.remove('custom-cursor-hidden');
-        cursorRing.classList.remove('custom-cursor-hidden');
-      });
-    }
-  }
 
   // ==========================================================================
   // 12. DESKTOP MOUSE PARALLAX ON HERO MEDIA & FLOATING CARDS
   // ==========================================================================
+  const isFinePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   if (isFinePointer && !prefersReducedMotion) {
     const heroSection = document.querySelector('.hero-section');
     const heroCard1 = document.querySelector('.floating-hero-card-1');

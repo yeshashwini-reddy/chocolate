@@ -567,12 +567,14 @@
   </main>
 
   <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/splash-auth.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const user = window.AuthSystem ? window.AuthSystem.getCurrentUser() : null;
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = window.AuthSystem ? await window.AuthSystem.getCurrentUser() : null;
       const loginView = document.getElementById('auth-login-view');
       const signupView = document.getElementById('auth-signup-view');
       const tabs = document.querySelector('.auth-tabs');
@@ -587,12 +589,11 @@
         if (signupView) signupView.style.display = 'none';
         if (tabs) tabs.style.display = 'none';
         if (loggedInBox) loggedInBox.style.display = 'block';
-        if (loggedInName) loggedInName.textContent = `Hello, ${user.name}!`;
+        if (loggedInName) loggedInName.textContent = `Hello, ${user.name}! (${user.role.toUpperCase()})`;
 
         if (logoutBtn) {
           logoutBtn.addEventListener('click', () => {
             window.AuthSystem.logout();
-            window.location.reload();
           });
         }
       }
@@ -650,14 +651,19 @@
       });
 
       // Handle Login Submit
-      document.getElementById('auth-login-form')?.addEventListener('submit', (e) => {
+      document.getElementById('auth-login-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         clearAuthErrors();
+
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
 
         const email = document.getElementById('login-email')?.value;
         const password = document.getElementById('login-password')?.value;
 
-        const res = window.AuthSystem.login(email, password);
+        const res = await window.AuthSystem.login(email, password);
+        if (submitBtn) submitBtn.disabled = false;
+
         if (!res.success) {
           const errElem = document.getElementById('login-error-msg');
           if (errElem) {
@@ -665,22 +671,34 @@
             errElem.classList.add('show');
           }
         } else {
-          const redirect = urlParams.get('redirect') || 'index.html';
-          window.location.href = redirect;
+          const role = res.role || 'user';
+          if (role === 'admin') {
+            window.location.href = 'admin.html';
+          } else if (role === 'owner') {
+            window.location.href = 'owner.html';
+          } else {
+            const redirect = urlParams.get('redirect') || 'index.html';
+            window.location.href = redirect;
+          }
         }
       });
 
       // Handle Signup Submit
-      document.getElementById('auth-signup-form')?.addEventListener('submit', (e) => {
+      document.getElementById('auth-signup-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         clearAuthErrors();
+
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
 
         const name = document.getElementById('signup-name')?.value;
         const email = document.getElementById('signup-email')?.value;
         const password = document.getElementById('signup-password')?.value;
         const confirmPassword = document.getElementById('signup-confirm-password')?.value;
 
-        const res = window.AuthSystem.signup(name, email, password, confirmPassword);
+        const res = await window.AuthSystem.signup(name, email, password, confirmPassword);
+        if (submitBtn) submitBtn.disabled = false;
+
         if (!res.success) {
           const errElem = document.getElementById('signup-error-msg');
           if (errElem) {
@@ -688,6 +706,7 @@
             errElem.classList.add('show');
           }
         } else {
+          // All public signups default strictly to 'user'
           const redirect = urlParams.get('redirect') || 'index.html';
           window.location.href = redirect;
         }
