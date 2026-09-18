@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { BRAND_CONFIG } from '../config/brandConfig';
 
 export default function FloatingElements({ toastMessage }) {
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -26,10 +25,6 @@ export default function FloatingElements({ toastMessage }) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const whatsappUrl = `https://wa.me/${BRAND_CONFIG.contact.whatsappNumber}?text=${encodeURIComponent(
-    "Hi Madhuri's Choco Heaven! I would like to enquire about your handcrafted chocolates and treats."
-  )}`;
-
   return (
     <>
       {/* Top Scroll Progress Indicator */}
@@ -42,7 +37,7 @@ export default function FloatingElements({ toastMessage }) {
 
       {/* Floating WhatsApp Quick Enquiry Button */}
       <a
-        href={whatsappUrl}
+        href="https://wa.me/918978889929"
         target="_blank"
         rel="noopener noreferrer"
         className="floating-whatsapp"
