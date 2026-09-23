@@ -23,6 +23,7 @@ import OrderHistoryModal from './components/OrderHistoryModal';
 import LoginView from './components/LoginView';
 import AdminDashboard from './components/AdminDashboard';
 import OwnerDashboard from './components/OwnerDashboard';
+import { useAuth } from './context/AuthContext';
 
 const routeViewMap = {
   '': 'view-home',
@@ -44,6 +45,7 @@ const routeViewMap = {
 };
 
 export default function App() {
+  const { user, isInitialized } = useAuth();
   const [currentHash, setCurrentHash] = useState(window.location.hash || '');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isOrderHistoryOpen, setIsOrderHistoryOpen] = useState(false);
@@ -158,7 +160,57 @@ export default function App() {
     setIsConfirmationOpen(true);
   };
 
-  // Dedicated standalone views: Login, Admin, Owner
+  // Prevent flashing or falling back while session/profile is loading on page load or refresh
+  if (!isInitialized) {
+    return (
+      <div className="app-root" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#120b08' }}>
+        <div style={{ textAlign: 'center', color: 'var(--gold-300)' }}>
+          <img src="assets/images/logo.png" alt="Loading" style={{ width: '64px', height: '64px', marginBottom: '16px' }} />
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: '1.1rem', letterSpacing: '1px' }}>Loading Choco Heaven...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Strict role-based route protection: Admin and Owner accounts must NEVER fall through to customer homepage
+  if (user?.role === 'admin') {
+    if (activeView !== 'view-admin') {
+      navigateTo('#admin');
+      return null;
+    }
+    return (
+      <div className="app-root">
+        <AdminDashboard onNavigate={navigateTo} />
+        <FloatingElements toastMessage={toastMessage} />
+      </div>
+    );
+  }
+
+  if (user?.role === 'owner') {
+    if (activeView !== 'view-owner') {
+      navigateTo('#owner');
+      return null;
+    }
+    return (
+      <div className="app-root">
+        <OwnerDashboard onNavigate={navigateTo} />
+        <FloatingElements toastMessage={toastMessage} />
+      </div>
+    );
+  }
+
+  // Guard against unauthorized access to Admin or Owner dashboard for non-admin/owner
+  if (activeView === 'view-admin' || activeView === 'view-owner') {
+    if (!user) {
+      navigateTo('#login');
+      return null;
+    }
+    // Normal customers are routed to their customer homepage
+    navigateTo('#home');
+    return null;
+  }
+
+  // Dedicated standalone Login / Sign-up view for non-admin/owner
   if (activeView === 'view-login') {
     return (
       <div className="app-root">
@@ -171,24 +223,6 @@ export default function App() {
         />
         <LoginView onNavigate={navigateTo} initialTab={initialTab} />
         <Footer onNavigate={navigateTo} />
-        <FloatingElements toastMessage={toastMessage} />
-      </div>
-    );
-  }
-
-  if (activeView === 'view-admin') {
-    return (
-      <div className="app-root">
-        <AdminDashboard onNavigate={navigateTo} />
-        <FloatingElements toastMessage={toastMessage} />
-      </div>
-    );
-  }
-
-  if (activeView === 'view-owner') {
-    return (
-      <div className="app-root">
-        <OwnerDashboard onNavigate={navigateTo} />
         <FloatingElements toastMessage={toastMessage} />
       </div>
     );

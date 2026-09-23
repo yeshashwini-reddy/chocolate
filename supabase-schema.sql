@@ -300,6 +300,19 @@ VALUES
 ON CONFLICT (product_key) DO NOTHING;
 
 -- ==========================================================================
+-- ROLE PRIVILEGES & GRANTS (CRITICAL FOR POSTGREST & RLS)
+-- ==========================================================================
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO authenticated, service_role;
+GRANT SELECT ON TABLE public.products TO anon;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO authenticated, service_role;
+
+-- ==========================================================================
 -- TEST ACCOUNTS ROLE PROMOTION INSTRUCTIONS
 -- To assign roles to test users created via Supabase Signup:
 -- 
@@ -308,7 +321,8 @@ ON CONFLICT (product_key) DO NOTHING;
 --    - admin@test.com
 --    - owner@test.com
 -- 
--- 2. Run the SQL below to elevate roles:
--- UPDATE public.profiles SET role = 'admin' WHERE email = 'admin@test.com';
--- UPDATE public.profiles SET role = 'owner' WHERE email = 'owner@test.com';
+-- 2. Run the SQL below to elevate roles in public.profiles:
+-- UPDATE public.profiles SET role = 'admin', updated_at = NOW() WHERE email = 'admin@test.com';
+-- UPDATE public.profiles SET role = 'owner', updated_at = NOW() WHERE email = 'owner@test.com';
 -- ==========================================================================
+

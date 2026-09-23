@@ -2,6 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import EmailOtpVerification from './EmailOtpVerification';
 
+// Demo account credentials (configurable via Vite environment variables)
+const DEMO_CREDENTIALS = {
+  customer: {
+    email: import.meta.env.VITE_DEMO_CUSTOMER_EMAIL || 'user@test.com',
+    password: import.meta.env.VITE_DEMO_CUSTOMER_PASSWORD || 'password123'
+  },
+  admin: {
+    email: import.meta.env.VITE_DEMO_ADMIN_EMAIL || 'admin@test.com',
+    password: import.meta.env.VITE_DEMO_ADMIN_PASSWORD || 'password123'
+  },
+  owner: {
+    email: import.meta.env.VITE_DEMO_OWNER_EMAIL || 'owner@test.com',
+    password: import.meta.env.VITE_DEMO_OWNER_PASSWORD || 'password123'
+  }
+};
+
 export default function LoginView({ onNavigate, initialTab = 'login' }) {
   const { user, login, signup, logout } = useAuth();
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -44,8 +60,16 @@ export default function LoginView({ onNavigate, initialTab = 'login' }) {
     setIsLoading(false);
 
     if (!res.success) {
+      const clean = loginEmail.trim().toLowerCase();
+      const isAdminOrOwner =
+        clean === DEMO_CREDENTIALS.admin.email.toLowerCase() ||
+        clean === DEMO_CREDENTIALS.owner.email.toLowerCase();
+
       if (res.message && res.message.toLowerCase().includes('email not confirmed')) {
-        const clean = loginEmail.trim().toLowerCase();
+        if (isAdminOrOwner) {
+          setLoginError('⚠️ Internal demo account email is not confirmed in Supabase. Please verify account confirmation in Supabase.');
+          return;
+        }
         setPendingOtpEmail(clean);
         sessionStorage.setItem('mch_pending_otp_email', clean);
         return;
@@ -53,6 +77,18 @@ export default function LoginView({ onNavigate, initialTab = 'login' }) {
       setLoginError(`⚠️ ${res.message}`);
     } else {
       const role = res.role || 'user';
+      const clean = loginEmail.trim().toLowerCase();
+
+      // Guard: Admin and Owner accounts must NEVER route to customer home
+      if (clean === DEMO_CREDENTIALS.admin.email.toLowerCase() && role !== 'admin') {
+        setLoginError(`⚠️ Role mismatch: Authenticated account role in public.profiles is "${role}", expected "admin".`);
+        return;
+      }
+      if (clean === DEMO_CREDENTIALS.owner.email.toLowerCase() && role !== 'owner') {
+        setLoginError(`⚠️ Role mismatch: Authenticated account role in public.profiles is "${role}", expected "owner".`);
+        return;
+      }
+
       if (role === 'admin') {
         if (onNavigate) onNavigate('#admin');
         else window.location.hash = '#admin';
@@ -105,6 +141,78 @@ export default function LoginView({ onNavigate, initialTab = 'login' }) {
     setLoginPassword(password);
     setActiveTab('login');
     setLoginError('');
+  };
+
+  const handleAdminDemoLogin = async () => {
+    const email = DEMO_CREDENTIALS.admin.email;
+    const password = DEMO_CREDENTIALS.admin.password;
+    setLoginEmail(email);
+    setLoginPassword(password);
+    setActiveTab('login');
+    setLoginError('');
+    setIsLoading(true);
+
+    try {
+      const res = await login(email, password);
+      setIsLoading(false);
+
+      if (!res.success) {
+        if (res.message && res.message.toLowerCase().includes('email not confirmed')) {
+          setLoginError('⚠️ Admin account is not email-confirmed in Supabase. Please confirm it in Supabase.');
+          return;
+        }
+        setLoginError(`⚠️ ${res.message}`);
+        return;
+      }
+
+      const role = res.role || 'user';
+      if (role !== 'admin') {
+        setLoginError(`⚠️ Access restricted: Account role in public.profiles is "${role}", expected "admin".`);
+        return;
+      }
+
+      if (onNavigate) onNavigate('#admin');
+      else window.location.hash = '#admin';
+    } catch (err) {
+      setIsLoading(false);
+      setLoginError(`⚠️ ${err.message || 'Admin login failed.'}`);
+    }
+  };
+
+  const handleOwnerDemoLogin = async () => {
+    const email = DEMO_CREDENTIALS.owner.email;
+    const password = DEMO_CREDENTIALS.owner.password;
+    setLoginEmail(email);
+    setLoginPassword(password);
+    setActiveTab('login');
+    setLoginError('');
+    setIsLoading(true);
+
+    try {
+      const res = await login(email, password);
+      setIsLoading(false);
+
+      if (!res.success) {
+        if (res.message && res.message.toLowerCase().includes('email not confirmed')) {
+          setLoginError('⚠️ Owner account is not email-confirmed in Supabase. Please confirm it in Supabase.');
+          return;
+        }
+        setLoginError(`⚠️ ${res.message}`);
+        return;
+      }
+
+      const role = res.role || 'user';
+      if (role !== 'owner') {
+        setLoginError(`⚠️ Access restricted: Account role in public.profiles is "${role}", expected "owner".`);
+        return;
+      }
+
+      if (onNavigate) onNavigate('#owner');
+      else window.location.hash = '#owner';
+    } catch (err) {
+      setIsLoading(false);
+      setLoginError(`⚠️ ${err.message || 'Owner login failed.'}`);
+    }
   };
 
   return (
@@ -359,7 +467,7 @@ export default function LoginView({ onNavigate, initialTab = 'login' }) {
                         type="button"
                         className="btn btn-outline btn-sm"
                         style={{ fontSize: '0.72rem', padding: '2px 8px' }}
-                        onClick={() => handleDemoFill('user@test.com', 'password123')}
+                        onClick={() => handleDemoFill(DEMO_CREDENTIALS.customer.email, DEMO_CREDENTIALS.customer.password)}
                       >
                         Customer Demo
                       </button>
@@ -367,7 +475,8 @@ export default function LoginView({ onNavigate, initialTab = 'login' }) {
                         type="button"
                         className="btn btn-outline btn-sm"
                         style={{ fontSize: '0.72rem', padding: '2px 8px' }}
-                        onClick={() => handleDemoFill('admin@test.com', 'password123')}
+                        onClick={handleAdminDemoLogin}
+                        disabled={isLoading}
                       >
                         Admin Demo
                       </button>
@@ -375,7 +484,8 @@ export default function LoginView({ onNavigate, initialTab = 'login' }) {
                         type="button"
                         className="btn btn-outline btn-sm"
                         style={{ fontSize: '0.72rem', padding: '2px 8px' }}
-                        onClick={() => handleDemoFill('owner@test.com', 'password123')}
+                        onClick={handleOwnerDemoLogin}
+                        disabled={isLoading}
                       >
                         Owner Demo
                       </button>

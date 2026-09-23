@@ -10,7 +10,7 @@ export default function Header({
 }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, role: authRole, logout } = useAuth();
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -44,8 +44,12 @@ export default function Header({
     }
   };
 
+  const role = authRole || user?.role || 'user';
+
   const getFirstName = () => {
     if (!user) return 'User';
+    if (role === 'admin') return 'Admin';
+    if (role === 'owner') return 'Owner';
     if (user.email === 'yeshaswinireddy32@gmail.com') return 'Yeshashwini';
     if (user.name) {
       const part = user.name.split(' ')[0];
@@ -57,7 +61,6 @@ export default function Header({
   const fullName = (user?.email === 'yeshaswinireddy32@gmail.com')
     ? 'Yeshashwini reddy'
     : (user?.name || firstName);
-  const role = user?.role || 'user';
 
   return (
     <header className={`site-header ${isScrolled ? 'scrolled' : ''}`} id="site-header" role="banner">

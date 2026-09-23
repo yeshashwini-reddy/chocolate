@@ -7,47 +7,88 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [authUser, setAuthUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [role, setRole] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [orders, setOrders] = useState([]);
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Helper to load user profile from public.profiles
-  const loadUserProfile = async (authUser) => {
-    if (!authUser) return null;
+  const loadUserProfile = async (supabaseAuthUser) => {
+    if (!supabaseAuthUser) {
+      setAuthUser(null);
+      setProfile(null);
+      setRole(null);
+      setUser(null);
+      return null;
+    }
+
     try {
-      const { data: profile, error } = await supabase
+      setAuthUser(supabaseAuthUser);
+
+      // 1. Fetch matching public.profiles row using the authenticated user's UUID
+      const { data: dbProfile, error: profileError } = await supabase
         .from('profiles')
-        .select('id, full_name, email, phone, role')
-        .eq('id', authUser.id)
+        .select('id, full_name, email, phone, role, created_at')
+        .eq('id', supabaseAuthUser.id)
         .maybeSingle();
 
-      if (error) {
-        console.warn('[Supabase] Could not fetch profile:', error.message);
+      let resolvedProfile = dbProfile || null;
+      let resolvedRole = dbProfile?.role || null;
+
+      // 2. If table select returned no role or had permission issues, query public.get_user_role RPC
+      if (!resolvedRole) {
+        try {
+          const { data: rpcRole, error: rpcError } = await supabase
+            .rpc('get_user_role', { user_id: supabaseAuthUser.id });
+          if (!rpcError && rpcRole) {
+            resolvedRole = rpcRole;
+          }
+        } catch (rpcErr) {
+          console.warn('[Supabase] get_user_role RPC query failed:', rpcErr);
+        }
       }
 
-      const fullName = profile?.full_name 
-        || authUser.user_metadata?.full_name 
-        || authUser.user_metadata?.name 
-        || (authUser.email ? authUser.email.split('@')[0] : 'Customer');
+      // 3. Fallback to auth metadata if present, else 'user'
+      if (!resolvedRole) {
+        resolvedRole = supabaseAuthUser.app_metadata?.role || supabaseAuthUser.user_metadata?.role || 'user';
+      }
+
+      const fullName = resolvedProfile?.full_name 
+        || supabaseAuthUser.user_metadata?.full_name 
+        || supabaseAuthUser.user_metadata?.name 
+        || (supabaseAuthUser.email ? supabaseAuthUser.email.split('@')[0] : 'Customer');
 
       const resolvedUser = {
-        id: authUser.id,
+        id: supabaseAuthUser.id,
         name: fullName,
-        email: profile?.email || authUser.email,
-        phone: profile?.phone || authUser.user_metadata?.phone || null,
-        role: profile?.role || 'user'
+        email: resolvedProfile?.email || supabaseAuthUser.email,
+        phone: resolvedProfile?.phone || supabaseAuthUser.user_metadata?.phone || null,
+        role: resolvedRole
       };
 
+      setProfile(resolvedProfile);
+      setRole(resolvedRole);
       setUser(resolvedUser);
       return resolvedUser;
     } catch (err) {
       console.warn('[Supabase] Error resolving profile:', err);
+      let fallbackRole = 'user';
+      try {
+        const { data: rpcRole } = await supabase.rpc('get_user_role', { user_id: supabaseAuthUser.id });
+        if (rpcRole) fallbackRole = rpcRole;
+      } catch (_) {}
+
       const fallbackUser = {
-        id: authUser.id,
-        name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Customer',
-        email: authUser.email,
-        phone: authUser.user_metadata?.phone || null,
-        role: 'user'
+        id: supabaseAuthUser.id,
+        name: supabaseAuthUser.user_metadata?.full_name || supabaseAuthUser.user_metadata?.name || supabaseAuthUser.email?.split('@')[0] || 'Customer',
+        email: supabaseAuthUser.email,
+        phone: supabaseAuthUser.user_metadata?.phone || null,
+        role: fallbackRole
       };
+      setProfile(null);
+      setRole(fallbackRole);
       setUser(fallbackUser);
       return fallbackUser;
     }
@@ -56,6 +97,7 @@ export function AuthProvider({ children }) {
   // Check Supabase session on mount & subscribe to real-time auth changes
   useEffect(() => {
     let isMounted = true;
+    setIsLoading(true);
 
     // 1. Fetch current active session (restores session on page refresh)
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -63,12 +105,19 @@ export function AuthProvider({ children }) {
       if (session?.user) {
         await loadUserProfile(session.user);
       } else {
+        setAuthUser(null);
+        setProfile(null);
+        setRole(null);
         setUser(null);
       }
       setIsInitialized(true);
+      setIsLoading(false);
     }).catch((err) => {
       console.warn('[Supabase] Session retrieval failed:', err);
-      if (isMounted) setIsInitialized(true);
+      if (isMounted) {
+        setIsInitialized(true);
+        setIsLoading(false);
+      }
     });
 
     // 2. Subscribe to auth state changes (sign in, sign out, token refresh)
@@ -79,6 +128,9 @@ export function AuthProvider({ children }) {
           await loadUserProfile(session.user);
         }
       } else if (event === 'SIGNED_OUT') {
+        setAuthUser(null);
+        setProfile(null);
+        setRole(null);
         setUser(null);
       }
     });
@@ -292,6 +344,9 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.warn('[Supabase] SignOut error:', err);
     } finally {
+      setAuthUser(null);
+      setProfile(null);
+      setRole(null);
       setUser(null);
     }
   };
@@ -315,7 +370,31 @@ export function AuthProvider({ children }) {
 
     const updatedOrders = [newOrder, ...orders];
     setOrders(updatedOrders);
-    localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(updatedOrders));
+    try {
+      localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(updatedOrders));
+    } catch (_) {}
+
+    // Async sync to Supabase orders table when authenticated
+    if (user?.id) {
+      supabase.from('orders').insert({
+        user_id: user.id,
+        customer_name: orderData.name,
+        customer_email: orderData.email,
+        customer_phone: orderData.phone,
+        occasion: orderData.occasion || null,
+        product_name: orderData.product || 'Handcrafted Confectionery',
+        quantity: orderData.quantity || 'Standard',
+        preferred_date: orderData.date || null,
+        customisation_details: orderData.customisation || null,
+        special_message: orderData.message || null,
+        status: 'pending',
+        total_amount: 0
+      }).then(({ error }) => {
+        if (error) console.warn('[Supabase] Order sync note:', error.message);
+      }).catch((e) => {
+        console.warn('[Supabase] Order sync exception:', e);
+      });
+    }
 
     return refNumber;
   };
@@ -328,6 +407,11 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       user,
+      authUser,
+      profile,
+      role: role || user?.role || null,
+      loading: isLoading || !isInitialized,
+      isLoading,
       isInitialized,
       login,
       signup,
