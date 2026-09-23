@@ -9,7 +9,7 @@ export const BRAND_CONFIG = {
   tagline: "Where every celebration becomes a little sweeter!",
   brandMessage: "🍫 Homemade • 🎂 Freshly Baked • 🎁 Customised • ❤️ Made with Love",
   subtitle: "Handcrafted chocolates, freshly baked treats and customised creations made with love for your most special moments.",
-  
+
   contact: {
     whatsappNumber: "YOUR_WHATSAPP_NUMBER",
     phoneNumber: "YOUR_PHONE_NUMBER",
@@ -280,7 +280,7 @@ export const BRAND_CONFIG = {
       actionText: "Customise & Enquire",
       category: "cakes",
       categoryLabel: "Cakes",
-      image: "assets/images/celebration_cake.jpg",
+      image: "https://www.recipetineats.com/uploads/2023/11/Mini-chocolate-cakes_2.jpg",
       tags: ["Centrepiece", "Custom Design"]
     },
     {
