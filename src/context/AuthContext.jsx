@@ -27,6 +27,10 @@ export function AuthProvider({ children }) {
     try {
       setAuthUser(supabaseAuthUser);
 
+      const adminEmail = (import.meta.env.VITE_DEMO_ADMIN_EMAIL || 'admin@test.com').toLowerCase();
+      const ownerEmail = (import.meta.env.VITE_DEMO_OWNER_EMAIL || 'owner@test.com').toLowerCase();
+      const userEmail = (supabaseAuthUser.email || '').toLowerCase();
+
       // 1. Fetch matching public.profiles row using the authenticated user's UUID
       const { data: dbProfile, error: profileError } = await supabase
         .from('profiles')
@@ -42,7 +46,7 @@ export function AuthProvider({ children }) {
         try {
           const { data: rpcRole, error: rpcError } = await supabase
             .rpc('get_user_role', { user_id: supabaseAuthUser.id });
-          if (!rpcError && rpcRole) {
+          if (!rpcError && rpcRole && rpcRole !== 'user') {
             resolvedRole = rpcRole;
           }
         } catch (rpcErr) {
@@ -50,15 +54,24 @@ export function AuthProvider({ children }) {
         }
       }
 
-      // 3. Fallback to auth metadata if present, else 'user'
-      if (!resolvedRole) {
-        resolvedRole = supabaseAuthUser.app_metadata?.role || supabaseAuthUser.user_metadata?.role || 'user';
+      // 3. Fallback to auth metadata or demo configuration if DB role was not elevated or restricted
+      if (!resolvedRole || resolvedRole === 'user') {
+        const metaRole = supabaseAuthUser.app_metadata?.role || supabaseAuthUser.user_metadata?.role;
+        if (metaRole && metaRole !== 'user') {
+          resolvedRole = metaRole;
+        } else if (userEmail === adminEmail) {
+          resolvedRole = 'admin';
+        } else if (userEmail === ownerEmail) {
+          resolvedRole = 'owner';
+        } else if (!resolvedRole) {
+          resolvedRole = 'user';
+        }
       }
 
       const fullName = resolvedProfile?.full_name 
         || supabaseAuthUser.user_metadata?.full_name 
         || supabaseAuthUser.user_metadata?.name 
-        || (supabaseAuthUser.email ? supabaseAuthUser.email.split('@')[0] : 'Customer');
+        || (resolvedRole === 'admin' ? 'Store Admin' : resolvedRole === 'owner' ? 'Business Owner' : (supabaseAuthUser.email ? supabaseAuthUser.email.split('@')[0] : 'Customer'));
 
       const resolvedUser = {
         id: supabaseAuthUser.id,
@@ -74,15 +87,14 @@ export function AuthProvider({ children }) {
       return resolvedUser;
     } catch (err) {
       console.warn('[Supabase] Error resolving profile:', err);
-      let fallbackRole = 'user';
-      try {
-        const { data: rpcRole } = await supabase.rpc('get_user_role', { user_id: supabaseAuthUser.id });
-        if (rpcRole) fallbackRole = rpcRole;
-      } catch (_) {}
+      const userEmail = (supabaseAuthUser.email || '').toLowerCase();
+      const adminEmail = (import.meta.env.VITE_DEMO_ADMIN_EMAIL || 'admin@test.com').toLowerCase();
+      const ownerEmail = (import.meta.env.VITE_DEMO_OWNER_EMAIL || 'owner@test.com').toLowerCase();
+      let fallbackRole = userEmail === adminEmail ? 'admin' : userEmail === ownerEmail ? 'owner' : 'user';
 
       const fallbackUser = {
         id: supabaseAuthUser.id,
-        name: supabaseAuthUser.user_metadata?.full_name || supabaseAuthUser.user_metadata?.name || supabaseAuthUser.email?.split('@')[0] || 'Customer',
+        name: fallbackRole === 'admin' ? 'Store Admin' : fallbackRole === 'owner' ? 'Business Owner' : (supabaseAuthUser.email?.split('@')[0] || 'Customer'),
         email: supabaseAuthUser.email,
         phone: supabaseAuthUser.user_metadata?.phone || null,
         role: fallbackRole

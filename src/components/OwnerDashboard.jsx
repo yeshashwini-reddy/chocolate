@@ -2,14 +2,60 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { BRAND_CONFIG } from '../config/brandConfig';
 import { supabase } from '../supabaseClient';
+import OwnerOrderCard from './OwnerOrderCard';
+import ProductStockAvailability from './ProductStockAvailability';
+import RegisteredCustomers from './RegisteredCustomers';
 
 export default function OwnerDashboard({ onNavigate }) {
   const { user, orders: fallbackOrders, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('custom');
   const [ordersList, setOrdersList] = useState([]);
   const [customersList, setCustomersList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchNotice, setFetchNotice] = useState(null);
+
+  const [productsStock, setProductsStock] = useState(() => {
+    return BRAND_CONFIG.chocolates.map((c) => ({
+      id: c.id,
+      name: c.name,
+      category: c.categoryLabel,
+      price: c.priceTag,
+      inStock: true
+    }));
+  });
+
+  const handleToggleStock = async (prodId, currentStock) => {
+    const nextStock = !currentStock;
+    setProductsStock((prev) =>
+      prev.map((p) => (p.id === prodId ? { ...p, inStock: nextStock } : p))
+    );
+    try {
+      await supabase
+        .from('products')
+        .update({ available: nextStock, is_available: nextStock })
+        .eq('id', prodId);
+    } catch (err) {
+      console.warn('[OwnerDashboard] Product stock update exception:', err);
+    }
+  };
+
+  // Update order status directly in Supabase
+  const handleStatusChange = async (orderId, newStatus) => {
+    setOrdersList((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
+    );
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: newStatus })
+        .eq('id', orderId);
+      if (error) {
+        console.warn('[OwnerDashboard] Status update warning:', error.message);
+      }
+    } catch (err) {
+      console.warn('[OwnerDashboard] Status update exception:', err);
+    }
+  };
 
   const loadOwnerData = async () => {
     setIsLoading(true);
@@ -22,10 +68,12 @@ export default function OwnerDashboard({ onNavigate }) {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (ordErr) {
-        console.warn('[OwnerDashboard] Orders fetch note:', ordErr.message);
-        errorMessages.push(`Orders: ${ordErr.message}`);
-        setOrdersList([]);
+      if (ordErr || !dbOrders || dbOrders.length === 0) {
+        if (ordErr) {
+          console.warn('[OwnerDashboard] Orders fetch note:', ordErr.message);
+          errorMessages.push(`Orders: ${ordErr.message}`);
+        }
+        setOrdersList(fallbackOrders || []);
       } else {
         setOrdersList(dbOrders || []);
       }
@@ -42,6 +90,24 @@ export default function OwnerDashboard({ onNavigate }) {
         setCustomersList([]);
       } else {
         setCustomersList(dbProfiles || []);
+      }
+
+      // 3. Fetch real Supabase Products
+      const { data: dbProducts, error: prodErr } = await supabase
+        .from('products')
+        .select('*')
+        .order('name');
+
+      if (!prodErr && dbProducts && dbProducts.length > 0) {
+        setProductsStock(
+          dbProducts.map((p) => ({
+            id: p.id,
+            name: p.name,
+            category: p.category_label || p.category,
+            price: p.price_tag || (p.price ? `₹${p.price}` : 'Price on Request'),
+            inStock: p.available ?? p.is_available ?? true
+          }))
+        );
       }
 
       if (errorMessages.length > 0) {
@@ -83,20 +149,23 @@ export default function OwnerDashboard({ onNavigate }) {
     };
   }, []);
 
-  // Real Supabase Business Calculations
-  const totalOrders = ordersList.length;
-  const pendingOrders = ordersList.filter((o) => o.status === 'pending');
-  const processingOrders = ordersList.filter((o) => o.status === 'processing');
+  // Filter order categories for the 4 primary summary sections
+  const pendingOrders = ordersList.filter((o) => o.status === 'pending' || !o.status);
+  const awaitingOrders = ordersList.filter((o) => o.status === 'processing' || o.status === 'accepted' || o.status === 'awaiting');
   const completedOrders = ordersList.filter((o) => o.status === 'completed');
   const cancelledOrders = ordersList.filter((o) => o.status === 'cancelled');
+
   const totalCustomers = customersList.length;
-  const totalRevenue = ordersList.reduce(
+
+  // Real database calculation: Revenue generated from completed orders
+  const totalRevenue = completedOrders.reduce(
     (sum, o) => sum + (Number(o.total_amount) || 0),
     0
   );
 
   return (
     <div style={{ background: '#150b08', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
       <header className="owner-header">
         <a
           href="#owner"
@@ -150,200 +219,132 @@ export default function OwnerDashboard({ onNavigate }) {
           </div>
         )}
 
-        {/* KPI CARDS */}
-        <div className="metrics-grid">
-          <div className="metric-card">
-            <div className="metric-icon">👑</div>
-            <div>
-              <div className="metric-val">{totalOrders}</div>
-              <div className="metric-lbl">Total Business Orders</div>
-            </div>
-          </div>
-          <div className="metric-card">
-            <div className="metric-icon">💬</div>
-            <div>
-              <div className="metric-val">{pendingOrders.length}</div>
-              <div className="metric-lbl">Awaiting Consultation</div>
-            </div>
-          </div>
-          <div className="metric-card">
-            <div className="metric-icon">⚙️</div>
-            <div>
-              <div className="metric-val">{processingOrders.length}</div>
-              <div className="metric-lbl">In Production</div>
-            </div>
-          </div>
-          <div className="metric-card">
-            <div className="metric-icon">✨</div>
+        {/* 4 PRIMARY SUMMARY CARDS (EXCLUSIVELY ONLY THESE 4 CARDS AT TOP) */}
+        <div className="metrics-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+          {/* 1. COMPLETED ORDERS */}
+          <div
+            className={`metric-card ${activeTab === 'completed' ? 'active-metric' : ''}`}
+            style={{ cursor: 'pointer', transition: 'transform 0.2s ease, border-color 0.2s ease' }}
+            onClick={() => setActiveTab('completed')}
+            title="Click to view Completed Orders"
+          >
+            <div className="metric-icon">✅</div>
             <div>
               <div className="metric-val">{completedOrders.length}</div>
-              <div className="metric-lbl">Fulfilled Orders</div>
+              <div className="metric-lbl">Completed Orders</div>
             </div>
           </div>
-          <div className="metric-card">
+
+          {/* 2. AWAITING ORDERS */}
+          <div
+            className={`metric-card ${activeTab === 'awaiting' ? 'active-metric' : ''}`}
+            style={{ cursor: 'pointer', transition: 'transform 0.2s ease, border-color 0.2s ease' }}
+            onClick={() => setActiveTab('awaiting')}
+            title="Click to view Awaiting Orders"
+          >
+            <div className="metric-icon">⏳</div>
+            <div>
+              <div className="metric-val">{awaitingOrders.length}</div>
+              <div className="metric-lbl">Awaiting Orders</div>
+            </div>
+          </div>
+
+          {/* 3. CANCELLED ORDERS */}
+          <div
+            className={`metric-card ${activeTab === 'cancelled' ? 'active-metric' : ''}`}
+            style={{ cursor: 'pointer', transition: 'transform 0.2s ease, border-color 0.2s ease' }}
+            onClick={() => setActiveTab('cancelled')}
+            title="Click to view Cancelled Orders"
+          >
             <div className="metric-icon">❌</div>
             <div>
               <div className="metric-val">{cancelledOrders.length}</div>
               <div className="metric-lbl">Cancelled Orders</div>
             </div>
           </div>
-          <div className="metric-card">
-            <div className="metric-icon">👥</div>
-            <div>
-              <div className="metric-val">{totalCustomers}</div>
-              <div className="metric-lbl">Client Base</div>
-            </div>
-          </div>
-          <div className="metric-card">
+
+          {/* 4. REVENUE GENERATED */}
+          <div
+            className={`metric-card ${activeTab === 'revenue' ? 'active-metric' : ''}`}
+            style={{ cursor: 'pointer', transition: 'transform 0.2s ease, border-color 0.2s ease' }}
+            onClick={() => setActiveTab('revenue')}
+            title="Click to view Revenue Generated"
+          >
             <div className="metric-icon">💰</div>
             <div>
               <div className="metric-val">{totalRevenue > 0 ? `₹${totalRevenue.toLocaleString()}` : '₹0'}</div>
-              <div className="metric-lbl">Recorded Revenue</div>
-            </div>
-          </div>
-          <div className="metric-card">
-            <div className="metric-icon">🍫</div>
-            <div>
-              <div className="metric-val">{BRAND_CONFIG.chocolates.length + BRAND_CONFIG.cakesAndBakes.length}</div>
-              <div className="metric-lbl">Handcrafted Items</div>
+              <div className="metric-lbl">Revenue Generated</div>
             </div>
           </div>
         </div>
 
-        {/* OWNER TABS */}
-        <div className="admin-tabs">
+        {/* NAVIGATION TABS */}
+        <div className="admin-tabs" style={{ marginTop: '24px' }}>
           <button
             type="button"
-            className={`admin-tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
-            onClick={() => setActiveTab('overview')}
+            className={`admin-tab-btn ${activeTab === 'custom' ? 'active' : ''}`}
+            onClick={() => setActiveTab('custom')}
           >
-            📊 Business Overview
+            ✨ Custom Orders ({pendingOrders.length})
           </button>
           <button
             type="button"
-            className={`admin-tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
-            onClick={() => setActiveTab('orders')}
+            className={`admin-tab-btn ${activeTab === 'awaiting' ? 'active' : ''}`}
+            onClick={() => setActiveTab('awaiting')}
           >
-            📦 All Orders ({totalOrders})
+            ⏳ Awaiting Orders ({awaitingOrders.length})
+          </button>
+          <button
+            type="button"
+            className={`admin-tab-btn ${activeTab === 'completed' ? 'active' : ''}`}
+            onClick={() => setActiveTab('completed')}
+          >
+            ✅ Completed Orders ({completedOrders.length})
+          </button>
+          <button
+            type="button"
+            className={`admin-tab-btn ${activeTab === 'cancelled' ? 'active' : ''}`}
+            onClick={() => setActiveTab('cancelled')}
+          >
+            ❌ Cancelled Orders ({cancelledOrders.length})
+          </button>
+          <button
+            type="button"
+            className={`admin-tab-btn ${activeTab === 'revenue' ? 'active' : ''}`}
+            onClick={() => setActiveTab('revenue')}
+          >
+            💰 Revenue Generated
+          </button>
+          <button
+            type="button"
+            className={`admin-tab-btn ${activeTab === 'products' ? 'active' : ''}`}
+            onClick={() => setActiveTab('products')}
+          >
+            📦 Product Stock & Availability ({productsStock.length})
+          </button>
+          <button
+            type="button"
+            className={`admin-tab-btn ${activeTab === 'customers' ? 'active' : ''}`}
+            onClick={() => setActiveTab('customers')}
+          >
+            👥 Registered Customers ({totalCustomers})
           </button>
         </div>
 
-        {/* OVERVIEW TAB */}
-        {activeTab === 'overview' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
-            <div className="admin-card-box">
-              <h3 style={{ fontFamily: 'var(--font-serif)', color: 'var(--gold-300)', marginBottom: '14px' }}>
-                Store Performance Summary
-              </h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', marginBottom: '18px' }}>
-                Madhuri's Choco Heaven handcrafted confectionery boutique continues to delight customers with custom
-                celebration cakes, artisanal chocolates, and luxury return gift hampers.
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-gold)' }}>
-                  <span>Total Customers:</span>
-                  <strong style={{ color: 'var(--gold-300)' }}>{totalCustomers} Registered</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-gold)' }}>
-                  <span>Fulfillment Rate:</span>
-                  <strong style={{ color: '#34d399' }}>
-                    {totalOrders > 0 ? `${Math.round((completedOrders.length / totalOrders) * 100)}%` : '100%'}
-                  </strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-gold)' }}>
-                  <span>Payment Tracking:</span>
-                  <strong style={{ color: 'var(--gold-400)', fontSize: '0.82rem' }}>
-                    Schema Migration Required (No payment_status column)
-                  </strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-gold)' }}>
-                  <span>WhatsApp Business:</span>
-                  <strong style={{ color: 'var(--gold-300)' }}>Connected</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-gold)' }}>
-                  <span>Pre-order Window:</span>
-                  <strong style={{ color: 'var(--gold-300)' }}>2 to 4 Days</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-gold)' }}>
-                  <span>Store Status:</span>
-                  <strong style={{ color: '#34d399' }}>Accepting Orders</strong>
-                </div>
-              </div>
-            </div>
+        {/* TABS CONTENT */}
 
-            <div className="admin-card-box">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                <h3 style={{ fontFamily: 'var(--font-serif)', color: 'var(--gold-300)', margin: 0 }}>
-                  Recent Orders & Enquiries
-                </h3>
-                <button
-                  type="button"
-                  className="btn btn-outline btn-sm"
-                  style={{ fontSize: '0.76rem', padding: '3px 8px' }}
-                  onClick={loadOwnerData}
-                >
-                  🔄 Refresh
-                </button>
-              </div>
-
-              {isLoading ? (
-                <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                  Loading recent business data...
-                </div>
-              ) : ordersList.length === 0 ? (
-                <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                  No orders or enquiries recorded yet.
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {ordersList.slice(0, 5).map((ord) => {
-                    const refId = ord.order_number || (ord.id ? ord.id.slice(0, 8).toUpperCase() : 'MCH-ORD');
-                    return (
-                      <div
-                        key={ord.id || refId}
-                        style={{
-                          background: 'rgba(21, 11, 8, 0.6)',
-                          padding: '12px',
-                          borderRadius: 'var(--radius-sm)',
-                          border: '1px solid var(--border-gold)'
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <strong style={{ color: 'var(--gold-300)' }}>{refId}</strong>
-                          <span
-                            style={{
-                              fontSize: '0.78rem',
-                              color: ord.status === 'completed' ? '#34d399' : ord.status === 'cancelled' ? '#f87171' : '#f59e0b',
-                              textTransform: 'uppercase',
-                              fontWeight: 700
-                            }}
-                          >
-                            {ord.status}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '0.88rem', color: 'var(--text-cream)' }}>
-                          {ord.customer_name || 'Customer'} — {ord.product_name || ord.category || 'Confectionery'}
-                        </div>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginTop: '4px' }}>
-                          {ord.preferred_date ? `Preferred: ${ord.preferred_date}` : 'Flexible timing'}
-                          {ord.total_amount ? ` · ₹${ord.total_amount}` : ''}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ORDERS TAB */}
-        {activeTab === 'orders' && (
-          <div className="admin-card-box">
+        {/* 1. CUSTOM ORDERS TAB (PENDING REQUESTS WORKFLOW) */}
+        {activeTab === 'custom' && (
+          <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontFamily: 'var(--font-serif)', color: 'var(--gold-300)', margin: 0 }}>
-                Full Store Order Roster
-              </h3>
+              <div>
+                <h3 style={{ fontFamily: 'var(--font-serif)', color: 'var(--gold-300)', margin: 0 }}>
+                  Custom Orders & Celebration Enquiries ({pendingOrders.length})
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '4px 0 0 0' }}>
+                  Review customer requests. Click <strong>[ ACCEPT ORDER ]</strong> to move to Awaiting Orders or <strong>[ CANCEL ORDER ]</strong> to mark as Cancelled.
+                </p>
+              </div>
               <button
                 type="button"
                 className="btn btn-outline btn-sm"
@@ -355,74 +356,284 @@ export default function OwnerDashboard({ onNavigate }) {
             </div>
 
             {isLoading ? (
-              <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                Loading live store orders...
+              <div className="admin-card-box" style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                Loading custom orders from database...
               </div>
-            ) : ordersList.length === 0 ? (
-              <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                No store orders recorded in the database yet.
+            ) : pendingOrders.length === 0 ? (
+              <div className="admin-card-box" style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                No pending custom orders or new enquiries at the moment.
               </div>
             ) : (
-              <div className="table-responsive">
-                <table className="admin-table">
-                  <thead>
-                    <tr>
-                      <th>Ref ID</th>
-                      <th>Client Name</th>
-                      <th>Contact</th>
-                      <th>Product / Occasion</th>
-                      <th>Quantity / Timing</th>
-                      <th>Amount</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ordersList.map((ord) => {
-                      const refId = ord.order_number || (ord.id ? ord.id.slice(0, 8).toUpperCase() : 'MCH-ORD');
-                      return (
-                        <tr key={ord.id || refId}>
-                          <td>
-                            <strong style={{ color: 'var(--gold-300)' }}>{refId}</strong>
-                          </td>
-                          <td>
-                            <div>{ord.customer_name || 'Client'}</div>
-                            <small style={{ color: 'var(--text-dim)' }}>{ord.customer_email || '—'}</small>
-                          </td>
-                          <td>{ord.customer_phone || '—'}</td>
-                          <td>
-                            <div>{ord.product_name || ord.category || 'Handcrafted Order'}</div>
-                            {ord.occasion && (
-                              <small style={{ color: 'var(--gold-400)' }}>Occasion: {ord.occasion}</small>
-                            )}
-                          </td>
-                          <td>
-                            <div>{ord.quantity || 'Standard'}</div>
-                            <small style={{ color: 'var(--text-dim)' }}>{ord.preferred_date || 'Flexible'}</small>
-                          </td>
-                          <td>
-                            <span style={{ color: 'var(--gold-300)', fontWeight: 600 }}>
-                              {ord.total_amount ? `₹${ord.total_amount}` : 'Quote on req'}
-                            </span>
-                          </td>
-                          <td>
-                            <span
-                              className="badge-tag badge-gold"
-                              style={{
-                                textTransform: 'uppercase',
-                                color: ord.status === 'completed' ? '#34d399' : ord.status === 'cancelled' ? '#f87171' : undefined
-                              }}
-                            >
-                              {ord.status}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              pendingOrders.map((ord) => (
+                <OwnerOrderCard
+                  key={ord.id}
+                  ord={ord}
+                  onStatusChange={handleStatusChange}
+                  actions={
+                    <>
+                      <button
+                        type="button"
+                        className="btn btn-gold btn-sm"
+                        onClick={() => handleStatusChange(ord.id, 'processing')}
+                      >
+                        ✅ ACCEPT ORDER
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        style={{ borderColor: '#f87171', color: '#f87171' }}
+                        onClick={() => handleStatusChange(ord.id, 'cancelled')}
+                      >
+                        ❌ CANCEL ORDER
+                      </button>
+                    </>
+                  }
+                />
+              ))
             )}
           </div>
+        )}
+
+        {/* 2. AWAITING ORDERS TAB */}
+        {activeTab === 'awaiting' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontFamily: 'var(--font-serif)', color: 'var(--gold-300)', margin: 0 }}>
+                  Awaiting Orders & Orders In Production ({awaitingOrders.length})
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '4px 0 0 0' }}>
+                  Orders accepted by Owner currently in production or awaiting final fulfillment.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                style={{ fontSize: '0.78rem', padding: '4px 10px' }}
+                onClick={loadOwnerData}
+              >
+                🔄 Refresh
+              </button>
+            </div>
+
+            {isLoading ? (
+              <div className="admin-card-box" style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                Loading awaiting orders from database...
+              </div>
+            ) : awaitingOrders.length === 0 ? (
+              <div className="admin-card-box" style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                No orders currently awaiting completion.
+              </div>
+            ) : (
+              awaitingOrders.map((ord) => (
+                <OwnerOrderCard
+                  key={ord.id}
+                  ord={ord}
+                  onStatusChange={handleStatusChange}
+                  actions={
+                    <>
+                      <button
+                        type="button"
+                        className="btn btn-gold btn-sm"
+                        onClick={() => handleStatusChange(ord.id, 'completed')}
+                      >
+                        ✨ MARK AS COMPLETED
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        style={{ borderColor: '#f87171', color: '#f87171' }}
+                        onClick={() => handleStatusChange(ord.id, 'cancelled')}
+                      >
+                        ❌ CANCEL ORDER
+                      </button>
+                    </>
+                  }
+                />
+              ))
+            )}
+          </div>
+        )}
+
+        {/* 3. COMPLETED ORDERS TAB */}
+        {activeTab === 'completed' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontFamily: 'var(--font-serif)', color: 'var(--gold-300)', margin: 0 }}>
+                  Completed Orders Directory ({completedOrders.length})
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '4px 0 0 0' }}>
+                  Fulfilled orders permanently recorded in database history.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                style={{ fontSize: '0.78rem', padding: '4px 10px' }}
+                onClick={loadOwnerData}
+              >
+                🔄 Refresh
+              </button>
+            </div>
+
+            {isLoading ? (
+              <div className="admin-card-box" style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                Loading completed orders...
+              </div>
+            ) : completedOrders.length === 0 ? (
+              <div className="admin-card-box" style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                No completed orders recorded yet.
+              </div>
+            ) : (
+              completedOrders.map((ord) => (
+                <OwnerOrderCard
+                  key={ord.id}
+                  ord={ord}
+                  onStatusChange={handleStatusChange}
+                />
+              ))
+            )}
+          </div>
+        )}
+
+        {/* 4. CANCELLED ORDERS TAB */}
+        {activeTab === 'cancelled' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontFamily: 'var(--font-serif)', color: 'var(--gold-300)', margin: 0 }}>
+                  Cancelled Orders Roster ({cancelledOrders.length})
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '4px 0 0 0' }}>
+                  Orders marked as cancelled. Records are preserved in the database.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                style={{ fontSize: '0.78rem', padding: '4px 10px' }}
+                onClick={loadOwnerData}
+              >
+                🔄 Refresh
+              </button>
+            </div>
+
+            {isLoading ? (
+              <div className="admin-card-box" style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                Loading cancelled orders...
+              </div>
+            ) : cancelledOrders.length === 0 ? (
+              <div className="admin-card-box" style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                No cancelled orders recorded.
+              </div>
+            ) : (
+              cancelledOrders.map((ord) => (
+                <OwnerOrderCard
+                  key={ord.id}
+                  ord={ord}
+                  onStatusChange={handleStatusChange}
+                  actions={
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      onClick={() => handleStatusChange(ord.id, 'processing')}
+                    >
+                      🔄 Re-accept Order
+                    </button>
+                  }
+                />
+              ))
+            )}
+          </div>
+        )}
+
+        {/* 5. REVENUE GENERATED TAB */}
+        {activeTab === 'revenue' && (
+          <div>
+            <div className="admin-card-box" style={{ marginBottom: '20px', textAlign: 'center', background: 'rgba(212, 163, 115, 0.08)' }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                Total Accumulated Revenue
+              </div>
+              <div style={{ fontSize: '2.5rem', fontWeight: 700, color: 'var(--gold-300)', fontFamily: 'var(--font-serif)', marginTop: '4px' }}>
+                ₹{totalRevenue.toLocaleString()}
+              </div>
+              <div style={{ fontSize: '0.82rem', color: 'var(--text-dim)', marginTop: '6px' }}>
+                Calculated from {completedOrders.length} completed order(s)
+              </div>
+            </div>
+
+            <div className="admin-card-box">
+              <h3 style={{ fontFamily: 'var(--font-serif)', color: 'var(--gold-300)', marginBottom: '16px' }}>
+                Revenue Breakdown & Completed Orders
+              </h3>
+
+              {completedOrders.length === 0 ? (
+                <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  No revenue recorded from completed orders yet.
+                </div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Ref ID</th>
+                        <th>Customer</th>
+                        <th>Product / Order</th>
+                        <th>Quantity</th>
+                        <th>Amount</th>
+                        <th>Completion Date</th>
+                        <th>Payment Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {completedOrders.map((ord) => {
+                        const refId = ord.order_number || (ord.id ? ord.id.slice(0, 8).toUpperCase() : 'MCH-ORD');
+                        return (
+                          <tr key={ord.id || refId}>
+                            <td>
+                              <strong style={{ color: 'var(--gold-300)' }}>{refId}</strong>
+                            </td>
+                            <td>{ord.customer_name || 'Customer'}</td>
+                            <td>{ord.product_name || ord.category || 'Confectionery'}</td>
+                            <td>{ord.quantity || 'Standard'}</td>
+                            <td>
+                              <strong style={{ color: 'var(--gold-300)' }}>
+                                {ord.total_amount ? `₹${ord.total_amount}` : 'Quote'}
+                              </strong>
+                            </td>
+                            <td style={{ color: 'var(--text-dim)', fontSize: '0.84rem' }}>
+                              {ord.updated_at ? new Date(ord.updated_at).toLocaleDateString() : 'Recent'}
+                            </td>
+                            <td>
+                              <span style={{ color: '#34d399', fontWeight: 700, fontSize: '0.82rem' }}>
+                                ● RECORDED / COMPLETED
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 6. PRODUCTS STOCK & AVAILABILITY TAB */}
+        {activeTab === 'products' && (
+          <ProductStockAvailability
+            productsStock={productsStock}
+            onToggleStock={handleToggleStock}
+          />
+        )}
+
+        {/* 7. REGISTERED CUSTOMERS TAB */}
+        {activeTab === 'customers' && (
+          <RegisteredCustomers
+            customersList={customersList}
+          />
         )}
       </main>
     </div>
