@@ -22,7 +22,9 @@ import OrderConfirmationModal from './components/OrderConfirmationModal';
 import OrderHistoryModal from './components/OrderHistoryModal';
 import LoginView from './components/LoginView';
 import AdminDashboard from './components/AdminDashboard';
+import AdminDashboard from './components/AdminDashboard';
 import OwnerDashboard from './components/OwnerDashboard';
+import CartView from './components/CartView';
 import { useAuth } from './context/AuthContext';
 
 const routeViewMap = {
@@ -37,6 +39,7 @@ const routeViewMap = {
   '#gallery': 'view-categories',
   '#chocolates': 'view-chocolates',
   '#cakes-bakes': 'view-cakes-bakes',
+  '#cart': 'view-cart',
   '#contact': 'view-contact',
   '#login': 'view-login',
   '#signup': 'view-login',
@@ -172,10 +175,11 @@ export default function App() {
     );
   }
 
-  // Strict role-based route protection: Admin and Owner accounts must NEVER fall through to customer homepage
-  if (user?.role === 'admin') {
-    if (activeView !== 'view-admin') {
-      navigateTo('#admin');
+  // Strict role-based route protection: Render dedicated dashboards when on #admin or #owner routes
+  if (activeView === 'view-admin') {
+    if (user?.role !== 'admin') {
+      if (!user) navigateTo('#login');
+      else navigateTo('#home');
       return null;
     }
     return (
@@ -186,9 +190,10 @@ export default function App() {
     );
   }
 
-  if (user?.role === 'owner') {
-    if (activeView !== 'view-owner') {
-      navigateTo('#owner');
+  if (activeView === 'view-owner') {
+    if (user?.role !== 'owner') {
+      if (!user) navigateTo('#login');
+      else navigateTo('#home');
       return null;
     }
     return (
@@ -197,17 +202,6 @@ export default function App() {
         <FloatingElements toastMessage={toastMessage} />
       </div>
     );
-  }
-
-  // Guard against unauthorized access to Admin or Owner dashboard for non-admin/owner
-  if (activeView === 'view-admin' || activeView === 'view-owner') {
-    if (!user) {
-      navigateTo('#login');
-      return null;
-    }
-    // Normal customers are routed to their customer homepage
-    navigateTo('#home');
-    return null;
   }
 
   // Dedicated standalone Login / Sign-up view for non-admin/owner

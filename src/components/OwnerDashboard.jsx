@@ -189,9 +189,10 @@ export default function OwnerDashboard({ onNavigate }) {
           <button
             type="button"
             className="btn btn-outline btn-sm"
-            title="Preview customer storefront in a new tab"
+            title="Preview customer storefront"
             onClick={() => {
-              window.open(window.location.origin + window.location.pathname + '#home', '_blank');
+              if (onNavigate) onNavigate('#home');
+              else window.location.hash = '#home';
             }}
           >
             Preview Store ↗

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 
 export default function MobileDrawer({
   isOpen,
@@ -9,6 +10,7 @@ export default function MobileDrawer({
   onOpenOrderHistory
 }) {
   const { user, logout } = useAuth();
+  const { getCartCount } = useCart();
 
   const handleLink = (e, hash) => {
     e.preventDefault();
@@ -131,6 +133,9 @@ export default function MobileDrawer({
 
           <a href="#contact" className="nav-link" onClick={(e) => handleLink(e, '#contact')}>
             Contact & Order
+          </a>
+          <a href="#cart" className="nav-link" onClick={(e) => handleLink(e, '#cart')}>
+            Cart ({getCartCount()})
           </a>
         </nav>
 

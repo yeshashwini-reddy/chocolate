@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { BRAND_CONFIG } from '../config/brandConfig';
+import AddToCartButton from './AddToCartButton';
 
-export default function CakesAndBakesSection({ onEnquireProduct, activeFilter: externalFilter }) {
+export default function CakesAndBakesSection({ onEnquireProduct, activeFilter: externalFilter, showToast }) {
   const [filter, setFilter] = useState(externalFilter || 'all');
 
   React.useEffect(() => {
@@ -101,20 +102,23 @@ export default function CakesAndBakesSection({ onEnquireProduct, activeFilter: e
                     <span className="price-label">Pricing</span>
                     <span className="price-text">{prod.priceTag || 'Price on Request'}</span>
                   </div>
-                  <button
-                    type="button"
-                    className="btn btn-gold btn-sm action-enquire-product"
-                    onClick={() => {
-                      if (onEnquireProduct) {
-                        onEnquireProduct({
-                          product: prod.name,
-                          category: prod.categoryLabel || 'Cakes'
-                        });
-                      }
-                    }}
-                  >
-                    Customise & Enquire
-                  </button>
+                  <div className="product-actions-group">
+                    <button
+                      type="button"
+                      className="btn btn-gold btn-sm action-enquire-product"
+                      onClick={() => {
+                        if (onEnquireProduct) {
+                          onEnquireProduct({
+                            product: prod.name,
+                            category: prod.categoryLabel || 'Cakes'
+                          });
+                        }
+                      }}
+                    >
+                      Customise & Enquire
+                    </button>
+                    <AddToCartButton product={prod} showToast={showToast} />
+                  </div>
                 </div>
               </div>
             </article>

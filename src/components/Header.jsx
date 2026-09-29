@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 
 export default function Header({
   activeView,
@@ -11,6 +12,7 @@ export default function Header({
   const [isScrolled, setIsScrolled] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { user, role: authRole, logout } = useAuth();
+  const { getCartCount } = useCart();
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -120,6 +122,13 @@ export default function Header({
             onClick={(e) => handleLinkClick(e, '#contact')}
           >
             Contact
+          </a>
+          <a
+            href="#cart"
+            className={`nav-link ${activeView === 'view-cart' ? 'active' : ''}`}
+            onClick={(e) => handleLinkClick(e, '#cart')}
+          >
+            Cart ({getCartCount()})
           </a>
         </nav>
 

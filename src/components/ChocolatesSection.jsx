@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { BRAND_CONFIG } from '../config/brandConfig';
+import AddToCartButton from './AddToCartButton';
 
-export default function ChocolatesSection({ onEnquireProduct, activeFilter: externalFilter }) {
+export default function ChocolatesSection({ onEnquireProduct, activeFilter: externalFilter, showToast }) {
   const [filter, setFilter] = useState(externalFilter || 'all');
   const [selectedFlavours, setSelectedFlavours] = useState({});
   const [selectedOccasions, setSelectedOccasions] = useState({});
@@ -268,20 +269,11 @@ export default function ChocolatesSection({ onEnquireProduct, activeFilter: exte
                         {prod.actionText || 'Customise & Enquire'}
                       </button>
 
-                      <a
-                        href={waUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn-whatsapp-quick"
-                        id={`wa-btn-${prod.id}`}
-                        aria-label={`Enquire about ${prod.name} on WhatsApp`}
-                        title="Direct WhatsApp Enquiry"
-                      >
-                        <span className="wa-quick-icon" aria-hidden="true">
-                          💬
-                        </span>
-                        <span className="wa-quick-text">WhatsApp</span>
-                      </a>
+                      <AddToCartButton
+                        product={prod}
+                        options={{ selectedFlavour, selectedOccasion }}
+                        showToast={showToast}
+                      />
                     </div>
                   </div>
                 </div>
