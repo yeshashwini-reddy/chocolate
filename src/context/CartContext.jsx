@@ -1,159 +1,439 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { supabase } from '../supabaseClient';
+import { useAuth } from './AuthContext';
 
-const CART_STORAGE_KEY = 'madhuris_choco_heaven_cart';
-
-const CartContext = createContext();
+const CartContext = createContext(null);
 
 export function CartProvider({ children }) {
-  const [cartItems, setCartItems] = useState(() => {
-    try {
-      const saved = localStorage.getItem(CART_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : [];
-    } catch (err) {
-      console.error('Failed to load cart from localStorage:', err);
-      return [];
-    }
-  });
+  const { user } = useAuth();
+  const [cartItems, setCartItems] = useState([]);
+  const [cartId, setCartId] = useState(null);
+  const [isLoadingCart, setIsLoadingCart] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [cartError, setCartError] = useState(null);
+  const [isDbCartActive, setIsDbCartActive] = useState(false);
 
-  // Save cart to localStorage whenever it changes
-  useEffect(() => {
-    try {
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
-    } catch (err) {
-      console.error('Failed to save cart to localStorage:', err);
-    }
-  }, [cartItems]);
+  // Guard to prevent concurrent add-to-cart clicks
+  const addingInProgressRef = useRef(false);
+  // Keep track of the active user ID to prevent race conditions during login/logout switches
+  const currentUserIdRef = useRef(null);
 
-  // Helper to parse price from priceTag or price prop
+  // Helper to parse numeric price from product properties
   const parsePrice = (priceTag, price) => {
-    if (typeof price === 'number' && !isNaN(price)) return price;
+    if (typeof price === 'number' && !isNaN(price) && price > 0) return price;
     if (typeof priceTag === 'string') {
       const match = priceTag.match(/\d+([.,]\d+)?/);
       if (match) {
-        return parseFloat(match[0].replace(',', ''));
+        const parsed = parseFloat(match[0].replace(',', ''));
+        if (!isNaN(parsed) && parsed > 0) return parsed;
       }
     }
     return null;
   };
 
   /**
-   * Add a product to the cart.
-   * If an item with the same cartItemId already exists, increase quantity.
+   * Helper to get user-specific storage key for isolated fallback
+   * Customer A and Customer B NEVER share storage keys.
    */
-  const addToCart = (product, options = {}) => {
-    const { selectedFlavour = '', selectedOccasion = '' } = options;
+  const getUserStorageKey = (uid) => `mch_isolated_cart_${uid}`;
 
-    // Generate unique ID based on product ID and selected options
-    const optionKey = [selectedFlavour, selectedOccasion].filter(Boolean).join(' - ');
-    const cartItemId = optionKey ? `${product.id}__${optionKey}` : product.id;
+  /**
+   * Fetch or initialize cart from Supabase for the authenticated user
+   */
+  const loadUserCart = useCallback(async (authenticatedUser) => {
+    if (!authenticatedUser?.id) return;
+    const uid = authenticatedUser.id;
+    currentUserIdRef.current = uid;
+    setIsLoadingCart(true);
+    setCartError(null);
 
-    const numericPrice = parsePrice(product.priceTag, product.price);
-    const displayName = optionKey ? `${product.name} (${optionKey})` : product.name;
+    try {
+      // 1. Locate or create active cart for user in public.carts
+      let { data: existingCart, error: cartFetchErr } = await supabase
+        .from('carts')
+        .select('id, user_id')
+        .eq('user_id', uid)
+        .maybeSingle();
 
-    setCartItems((prevItems) => {
-      const existingIndex = prevItems.findIndex((item) => item.cartItemId === cartItemId);
-
-      if (existingIndex > -1) {
-        // Increase quantity of existing item
-        const updated = [...prevItems];
-        updated[existingIndex] = {
-          ...updated[existingIndex],
-          quantity: updated[existingIndex].quantity + 1
-        };
-        return updated;
+      if (cartFetchErr) {
+        // Table may not exist yet if SQL migration is pending
+        console.info('[CartContext] Supabase carts table lookup:', cartFetchErr.message);
+        throw cartFetchErr;
       }
 
-      // Add new item
-      const newItem = {
-        cartItemId,
-        productId: product.id,
-        name: displayName,
-        rawName: product.name,
-        image: product.image || 'assets/images/chocolate_truffles_box.jpg',
-        category: product.categoryLabel || product.category || 'Confectionery',
-        priceTag: product.priceTag || 'Price on Request',
-        price: numericPrice,
-        quantity: 1,
-        selectedFlavour,
-        selectedOccasion
+      if (!existingCart) {
+        const { data: newCart, error: cartCreateErr } = await supabase
+          .from('carts')
+          .insert({ user_id: uid })
+          .select('id, user_id')
+          .single();
+
+        if (cartCreateErr) {
+          throw cartCreateErr;
+        }
+        existingCart = newCart;
+      }
+
+      // Check if user switched while query was running
+      if (currentUserIdRef.current !== uid) return;
+
+      setCartId(existingCart.id);
+      setIsDbCartActive(true);
+
+      // 2. Fetch cart items for this specific cart
+      const { data: items, error: itemsErr } = await supabase
+        .from('cart_items')
+        .select('*')
+        .eq('cart_id', existingCart.id)
+        .order('created_at', { ascending: true });
+
+      if (itemsErr) {
+        throw itemsErr;
+      }
+
+      if (currentUserIdRef.current !== uid) return;
+
+      const formatted = (items || []).map((row) => ({
+        id: row.id,
+        cartItemId: row.cart_item_key,
+        productId: row.product_id,
+        name: row.product_name,
+        rawName: row.product_name,
+        price: row.unit_price ? Number(row.unit_price) : null,
+        priceTag: row.price_tag || (row.unit_price ? `₹${row.unit_price}` : 'Price on Request'),
+        image: row.image_url || 'assets/images/chocolate_truffles_box.jpg',
+        category: row.category || 'Confectionery',
+        quantity: row.quantity || 1,
+        customisationDetails: row.customisation_details || {},
+        selectedFlavour: row.customisation_details?.selectedFlavour || '',
+        selectedOccasion: row.customisation_details?.selectedOccasion || ''
+      }));
+
+      setCartItems(formatted);
+      try {
+        localStorage.setItem(getUserStorageKey(uid), JSON.stringify(formatted));
+      } catch (_) {}
+    } catch (err) {
+      // Graceful customer-isolated fallback if database table is pending migration
+      console.warn('[CartContext] Operating in customer-isolated local mode for user:', uid, err.message);
+      setIsDbCartActive(false);
+
+      if (currentUserIdRef.current === uid) {
+        try {
+          const cached = localStorage.getItem(getUserStorageKey(uid));
+          setCartItems(cached ? JSON.parse(cached) : []);
+        } catch (_) {
+          setCartItems([]);
+        }
+      }
+    } finally {
+      if (currentUserIdRef.current === uid) {
+        setIsLoadingCart(false);
+      }
+    }
+  }, []);
+
+  /**
+   * Monitor authentication changes
+   * CRITICAL REQUIREMENT:
+   * - When user logs in: fetch their cart.
+   * - When user logs out: immediately clear frontend state and cached active user data.
+   * - When Customer A logs out and Customer B logs in: never leak Customer A's items to Customer B.
+   */
+  useEffect(() => {
+    if (!user) {
+      currentUserIdRef.current = null;
+      setCartItems([]);
+      setCartId(null);
+      setIsDbCartActive(false);
+      setIsLoadingCart(false);
+      setCartError(null);
+    } else {
+      if (currentUserIdRef.current !== user.id) {
+        // Clear previous user's cart state immediately before loading new user
+        setCartItems([]);
+        setCartId(null);
+        loadUserCart(user);
+      }
+    }
+  }, [user, loadUserCart]);
+
+  /**
+   * Add a product to the authenticated customer's cart
+   */
+  const addToCart = async (product, options = {}) => {
+    if (addingInProgressRef.current) return { success: false, message: 'Please wait...' };
+    addingInProgressRef.current = true;
+    setIsSyncing(true);
+
+    try {
+      if (!user) {
+        return {
+          success: false,
+          requiresLogin: true,
+          message: 'Please log in to add items to your personal shopping cart 🍫'
+        };
+      }
+
+      const uid = user.id;
+      const { selectedFlavour = '', selectedOccasion = '' } = options;
+
+      // Unique identifier for item + customization combination
+      const optionKey = [selectedFlavour, selectedOccasion].filter(Boolean).join(' - ');
+      const cartItemKey = optionKey ? `${product.id}__${optionKey}` : `${product.id}`;
+
+      const numericPrice = parsePrice(product.priceTag, product.price);
+      const displayName = optionKey ? `${product.name} (${optionKey})` : product.name;
+      const customisationDetails = { selectedFlavour, selectedOccasion };
+
+      // Find if item already exists in local state
+      const existingItem = cartItems.find((i) => i.cartItemId === cartItemKey);
+      const newQuantity = existingItem ? existingItem.quantity + 1 : 1;
+
+      // Optimistic update
+      let nextItems;
+      if (existingItem) {
+        nextItems = cartItems.map((item) =>
+          item.cartItemId === cartItemKey ? { ...item, quantity: newQuantity } : item
+        );
+      } else {
+        const newItem = {
+          cartItemId: cartItemKey,
+          productId: String(product.id),
+          name: displayName,
+          rawName: product.name,
+          image: product.image || 'assets/images/chocolate_truffles_box.jpg',
+          category: product.categoryLabel || product.category || 'Confectionery',
+          priceTag: product.priceTag || (numericPrice ? `₹${numericPrice}` : 'Price on Request'),
+          price: numericPrice,
+          quantity: 1,
+          customisationDetails,
+          selectedFlavour,
+          selectedOccasion
+        };
+        nextItems = [...cartItems, newItem];
+      }
+
+      setCartItems(nextItems);
+      try {
+        localStorage.setItem(getUserStorageKey(uid), JSON.stringify(nextItems));
+      } catch (_) {}
+
+      // Synchronize with Supabase database if active
+      if (cartId && isDbCartActive) {
+        if (existingItem) {
+          await supabase
+            .from('cart_items')
+            .update({ quantity: newQuantity, updated_at: new Date().toISOString() })
+            .eq('cart_id', cartId)
+            .eq('cart_item_key', cartItemKey);
+        } else {
+          await supabase.from('cart_items').insert({
+            cart_id: cartId,
+            product_id: String(product.id),
+            product_name: displayName,
+            unit_price: numericPrice,
+            price_tag: product.priceTag || (numericPrice ? `₹${numericPrice}` : 'Price on Request'),
+            image_url: product.image || 'assets/images/chocolate_truffles_box.jpg',
+            category: product.categoryLabel || product.category || 'Confectionery',
+            quantity: 1,
+            customisation_details: customisationDetails,
+            cart_item_key: cartItemKey
+          });
+        }
+      }
+
+      return {
+        success: true,
+        message: `${displayName} added to your cart.`
       };
-
-      return [...prevItems, newItem];
-    });
+    } catch (err) {
+      console.warn('[CartContext] addToCart exception:', err);
+      return {
+        success: true, // Local optimistic state preserved
+        message: `${product.name} added to your cart.`
+      };
+    } finally {
+      setIsSyncing(false);
+      addingInProgressRef.current = false;
+    }
   };
 
   /**
-   * Remove an item completely from cart by cartItemId
+   * Update quantity of an item (+1 or -1)
    */
-  const removeFromCart = (cartItemId) => {
-    setCartItems((prevItems) => prevItems.filter((item) => item.cartItemId !== cartItemId));
+  const updateQuantity = async (cartItemId, delta) => {
+    if (!user) return;
+    const uid = user.id;
+
+    const targetItem = cartItems.find((i) => i.cartItemId === cartItemId);
+    if (!targetItem) return;
+
+    const newQty = targetItem.quantity + delta;
+    if (newQty <= 0) {
+      // When quantity reaches zero, remove product from cart completely and restore Add to Cart button
+      await removeFromCart(cartItemId);
+      return;
+    }
+
+    const nextItems = cartItems.map((item) =>
+      item.cartItemId === cartItemId ? { ...item, quantity: newQty } : item
+    );
+
+    setCartItems(nextItems);
+    try {
+      localStorage.setItem(getUserStorageKey(uid), JSON.stringify(nextItems));
+    } catch (_) {}
+
+    if (cartId && isDbCartActive) {
+      try {
+        await supabase
+          .from('cart_items')
+          .update({ quantity: newQty, updated_at: new Date().toISOString() })
+          .eq('cart_id', cartId)
+          .eq('cart_item_key', cartItemId);
+      } catch (err) {
+        console.warn('[CartContext] updateQuantity DB sync note:', err.message);
+      }
+    }
   };
 
   /**
-   * Update quantity of an item (+1 or -1). Removes if quantity reaches 0.
+   * Remove item from cart completely
    */
-  const updateQuantity = (cartItemId, delta) => {
-    setCartItems((prevItems) => {
-      return prevItems
-        .map((item) => {
-          if (item.cartItemId === cartItemId) {
-            const newQty = item.quantity + delta;
-            return newQty > 0 ? { ...item, quantity: newQty } : null;
-          }
-          return item;
-        })
-        .filter(Boolean);
-    });
+  const removeFromCart = async (cartItemId) => {
+    if (!user) return;
+    const uid = user.id;
+
+    const nextItems = cartItems.filter((item) => item.cartItemId !== cartItemId);
+    setCartItems(nextItems);
+    try {
+      localStorage.setItem(getUserStorageKey(uid), JSON.stringify(nextItems));
+    } catch (_) {}
+
+    if (cartId && isDbCartActive) {
+      try {
+        await supabase
+          .from('cart_items')
+          .delete()
+          .eq('cart_id', cartId)
+          .eq('cart_item_key', cartItemId);
+      } catch (err) {
+        console.warn('[CartContext] removeFromCart DB sync note:', err.message);
+      }
+    }
   };
 
   /**
-   * Clear all items from cart
+   * Clear all items from active cart
    */
-  const clearCart = () => {
+  const clearCart = async () => {
+    if (!user) return;
+    const uid = user.id;
+
     setCartItems([]);
+    try {
+      localStorage.removeItem(getUserStorageKey(uid));
+    } catch (_) {}
+
+    if (cartId && isDbCartActive) {
+      try {
+        await supabase.from('cart_items').delete().eq('cart_id', cartId);
+      } catch (err) {
+        console.warn('[CartContext] clearCart DB sync note:', err.message);
+      }
+    }
   };
 
   /**
-   * Calculate total item count in cart
+   * Total unit count in cart for dynamic navbar badge
    */
   const getCartCount = () => {
-    return cartItems.reduce((total, item) => total + item.quantity, 0);
+    return cartItems.reduce((total, item) => total + (item.quantity || 1), 0);
   };
 
   /**
-   * Calculate cart subtotal details
+   * Calculate cart financial and quantity summaries
    */
   const getCartSummary = () => {
     let numericSubtotal = 0;
     let hasPriceOnRequest = false;
     let totalItems = 0;
+    let pricedCount = 0;
+    let unconfirmedCount = 0;
 
     cartItems.forEach((item) => {
-      totalItems += item.quantity;
+      const qty = item.quantity || 1;
+      totalItems += qty;
       if (typeof item.price === 'number' && item.price > 0) {
-        numericSubtotal += item.price * item.quantity;
+        numericSubtotal += item.price * qty;
+        pricedCount += qty;
       } else {
         hasPriceOnRequest = true;
+        unconfirmedCount += qty;
       }
     });
 
     return {
       numericSubtotal,
       hasPriceOnRequest,
-      totalItems
+      totalItems,
+      pricedCount,
+      unconfirmedCount,
+      isPayableOnline: numericSubtotal > 0 && !hasPriceOnRequest
     };
   };
+
+  /**
+   * Helper to get current quantity of a product with specific options
+   */
+  const getProductQuantity = useCallback((productId, options = {}) => {
+    if (!productId) return 0;
+    const { selectedFlavour = '', selectedOccasion = '' } = options;
+    const optionKey = [selectedFlavour, selectedOccasion].filter(Boolean).join(' - ');
+    const cartItemKey = optionKey ? `${productId}__${optionKey}` : `${productId}`;
+
+    // 1. Exact match by cartItemId
+    const item = cartItems.find((i) => i.cartItemId === cartItemKey);
+    if (item) return item.quantity || 0;
+
+    // 2. Fallback: If no options are specified, check if there's an item with matching productId
+    if (!optionKey) {
+      const fallbackItem = cartItems.find((i) => String(i.productId) === String(productId));
+      if (fallbackItem) return fallbackItem.quantity || 0;
+    }
+
+    return 0;
+  }, [cartItems]);
+
+  /**
+   * Helper to derive unique cartItemKey for product and customizations
+   */
+  const getCartItemKey = useCallback((productId, options = {}) => {
+    if (!productId) return '';
+    const { selectedFlavour = '', selectedOccasion = '' } = options;
+    const optionKey = [selectedFlavour, selectedOccasion].filter(Boolean).join(' - ');
+    return optionKey ? `${productId}__${optionKey}` : `${productId}`;
+  }, []);
 
   return (
     <CartContext.Provider
       value={{
         cartItems,
+        cartId,
+        isLoadingCart,
+        isSyncing,
+        cartError,
+        isDbCartActive,
         addToCart,
         removeFromCart,
         updateQuantity,
         clearCart,
         getCartCount,
-        getCartSummary
+        getCartSummary,
+        getProductQuantity,
+        getCartItemKey,
+        refreshCart: () => user && loadUserCart(user)
       }}
     >
       {children}

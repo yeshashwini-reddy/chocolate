@@ -156,49 +156,47 @@ _Sent via Madhuri’s Choco Heaven Website_`
               </p>
 
               <div className="quick-contact-list">
-                {/* WhatsApp */}
+                {/* 1. Phone / Mobile */}
                 <a
-                  href={`https://wa.me/${BRAND_CONFIG.contact.whatsappNumber}`}
+                  href="tel:+918978889929"
+                  className="quick-contact-item"
+                  title="Call +91 89788 89929"
+                  aria-label="Call +91 89788 89929"
+                >
+                  <span className="contact-item-icon" aria-hidden="true">📞</span>
+                  <div>
+                    <div className="contact-item-label">PHONE / MOBILE</div>
+                    <div className="contact-item-value">+91 89788 89929</div>
+                  </div>
+                </a>
+
+                {/* 2. Email Orders */}
+                <a
+                  href="mailto:info@madhuricollective.com"
+                  className="quick-contact-item"
+                  title="Email info@madhuricollective.com"
+                  aria-label="Email info@madhuricollective.com"
+                >
+                  <span className="contact-item-icon" aria-hidden="true">✉️</span>
+                  <div>
+                    <div className="contact-item-label">EMAIL ORDERS</div>
+                    <div className="contact-item-value">info@madhuricollective.com</div>
+                  </div>
+                </a>
+
+                {/* 3. Instagram */}
+                <a
+                  href="https://www.instagram.com/madhuris_choco_heaven?exln=MTBpeWNwemlhbWF4dQ=="
                   target="_blank"
                   rel="noopener noreferrer"
                   className="quick-contact-item"
+                  title="Follow @madhuris_choco_heaven on Instagram"
+                  aria-label="Follow @madhuris_choco_heaven on Instagram"
                 >
-                  <span className="contact-item-icon">💬</span>
+                  <span className="contact-item-icon" aria-hidden="true">📸</span>
                   <div>
-                    <div className="contact-item-label">WhatsApp Quick Chat</div>
-                    <div className="contact-item-value">Chat with Madhuri</div>
-                  </div>
-                </a>
-
-                {/* Phone */}
-                <a href={`tel:${BRAND_CONFIG.contact.phoneNumber}`} className="quick-contact-item">
-                  <span className="contact-item-icon">📞</span>
-                  <div>
-                    <div className="contact-item-label">Call For Enquiries</div>
-                    <div className="contact-item-value">Call Madhuri's Choco Heaven</div>
-                  </div>
-                </a>
-
-                {/* Instagram */}
-                <a
-                  href={BRAND_CONFIG.social.instagram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="quick-contact-item"
-                >
-                  <span className="contact-item-icon">📸</span>
-                  <div>
-                    <div className="contact-item-label">Instagram DM</div>
-                    <div className="contact-item-value">@MadhurisChocoHeaven</div>
-                  </div>
-                </a>
-
-                {/* Email */}
-                <a href={`mailto:${BRAND_CONFIG.contact.email}`} className="quick-contact-item">
-                  <span className="contact-item-icon">✉️</span>
-                  <div>
-                    <div className="contact-item-label">Email Orders</div>
-                    <div className="contact-item-value">Send an Email</div>
+                    <div className="contact-item-label">INSTAGRAM</div>
+                    <div className="contact-item-value">@madhuris_choco_heaven</div>
                   </div>
                 </a>
               </div>

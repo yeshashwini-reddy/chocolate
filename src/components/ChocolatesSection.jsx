@@ -244,16 +244,19 @@ export default function ChocolatesSection({ onEnquireProduct, activeFilter: exte
                     </div>
                   )}
 
-                  <div className="product-footer">
-                    <div className="price-box">
-                      <span className="price-label">Pricing</span>
-                      <span className="price-text">{prod.priceTag || 'Price on Request'}</span>
+                  {/* Bottom section: Divider, Pricing & Action Buttons */}
+                  <div className="product-card-bottom">
+                    <div className="product-card-divider" role="separator" />
+
+                    <div className="product-price-section">
+                      <span className="price-overhead-label">PRICE</span>
+                      <span className="price-amount">{prod.priceTag || 'Price on Request'}</span>
                     </div>
 
-                    <div className="product-actions-group">
+                    <div className="product-card-actions">
                       <button
                         type="button"
-                        className="btn btn-gold btn-sm action-enquire-product"
+                        className="btn-customise-enquire action-enquire-product"
                         onClick={() => {
                           if (onEnquireProduct) {
                             onEnquireProduct({
@@ -273,6 +276,7 @@ export default function ChocolatesSection({ onEnquireProduct, activeFilter: exte
                         product={prod}
                         options={{ selectedFlavour, selectedOccasion }}
                         showToast={showToast}
+                        className="btn-card-add-cart"
                       />
                     </div>
                   </div>

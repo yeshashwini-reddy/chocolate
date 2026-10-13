@@ -125,7 +125,7 @@ export default function Header({
           </a>
           <a
             href="#cart"
-            className={`nav-link ${activeView === 'view-cart' ? 'active' : ''}`}
+            className={`nav-link ${activeView === 'view-cart' || activeView === 'view-checkout' ? 'active' : ''}`}
             onClick={(e) => handleLinkClick(e, '#cart')}
           >
             Cart ({getCartCount()})

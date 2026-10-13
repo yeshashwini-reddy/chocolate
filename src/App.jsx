@@ -39,6 +39,7 @@ const routeViewMap = {
   '#chocolates': 'view-chocolates',
   '#cakes-bakes': 'view-cakes-bakes',
   '#cart': 'view-cart',
+  '#checkout': 'view-checkout',
   '#contact': 'view-contact',
   '#login': 'view-login',
   '#signup': 'view-login',
@@ -277,6 +278,7 @@ export default function App() {
           <ChocolatesSection
             onEnquireProduct={handleEnquireProduct}
             activeFilter={chocolateFilter}
+            showToast={showToast}
           />
         </div>
 
@@ -285,10 +287,20 @@ export default function App() {
           <CakesAndBakesSection
             onEnquireProduct={handleEnquireProduct}
             activeFilter={cakesFilter}
+            showToast={showToast}
           />
         </div>
 
-        {/* VIEW 6: CONTACT */}
+        {/* VIEW 6: SHOPPING CART & CHECKOUT */}
+        <div className={`page-view ${activeView === 'view-cart' || activeView === 'view-checkout' ? 'active-view' : 'hidden-view'}`} id="view-cart">
+          <CartView
+            onNavigate={navigateTo}
+            showToast={showToast}
+            initialView={activeView === 'view-checkout' ? 'checkout' : 'cart'}
+          />
+        </div>
+
+        {/* VIEW 7: CONTACT */}
         <div className={`page-view ${activeView === 'view-contact' ? 'active-view' : 'hidden-view'}`} id="view-contact">
           <ContactSection
             ref={contactRef}

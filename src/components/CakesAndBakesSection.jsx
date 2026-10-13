@@ -76,11 +76,11 @@ export default function CakesAndBakesSection({ onEnquireProduct, activeFilter: e
           </button>
         </div>
 
-        <div className="products-grid">
+        <div className="products-grid bakes-products-grid">
           {filteredBakes.map((prod) => (
             <article
               key={prod.id}
-              className="product-card reveal-on-scroll revealed"
+              className="product-card bakes-product-card reveal-on-scroll revealed"
               data-category={prod.category}
             >
               <div className="product-img-box">
@@ -97,15 +97,20 @@ export default function CakesAndBakesSection({ onEnquireProduct, activeFilter: e
               <div className="product-body">
                 <h3 className="product-name">{prod.name}</h3>
                 <p className="product-desc">{prod.desc}</p>
-                <div className="product-footer">
-                  <div className="price-box">
-                    <span className="price-label">Pricing</span>
-                    <span className="price-text">{prod.priceTag || 'Price on Request'}</span>
+                
+                {/* Bottom section: Divider, Pricing & Action Buttons */}
+                <div className="product-card-bottom">
+                  <div className="product-card-divider" role="separator" />
+
+                  <div className="product-price-section">
+                    <span className="price-overhead-label">PRICE</span>
+                    <span className="price-amount">{prod.priceTag || (prod.price ? `₹${prod.price}` : 'Price on Request')}</span>
                   </div>
-                  <div className="product-actions-group">
+
+                  <div className="product-card-actions">
                     <button
                       type="button"
-                      className="btn btn-gold btn-sm action-enquire-product"
+                      className="btn-customise-enquire action-enquire-product"
                       onClick={() => {
                         if (onEnquireProduct) {
                           onEnquireProduct({
@@ -117,7 +122,11 @@ export default function CakesAndBakesSection({ onEnquireProduct, activeFilter: e
                     >
                       Customise & Enquire
                     </button>
-                    <AddToCartButton product={prod} showToast={showToast} />
+                    <AddToCartButton
+                      product={prod}
+                      showToast={showToast}
+                      className="btn-card-add-cart"
+                    />
                   </div>
                 </div>
               </div>
