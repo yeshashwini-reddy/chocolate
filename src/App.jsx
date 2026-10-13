@@ -22,7 +22,6 @@ import OrderConfirmationModal from './components/OrderConfirmationModal';
 import OrderHistoryModal from './components/OrderHistoryModal';
 import LoginView from './components/LoginView';
 import AdminDashboard from './components/AdminDashboard';
-import AdminDashboard from './components/AdminDashboard';
 import OwnerDashboard from './components/OwnerDashboard';
 import CartView from './components/CartView';
 import { useAuth } from './context/AuthContext';
