@@ -268,11 +268,21 @@ h1, h2, h3, h4, .font-serif {
   border-radius: var(--radius-full);
   font-weight: 600;
   font-size: 1rem;
-  transition: all var(--trans-normal);
+  transition: transform var(--trans-normal), background var(--trans-normal), border-color var(--trans-normal), box-shadow var(--trans-normal), color var(--trans-fast);
   text-align: center;
   white-space: nowrap;
   position: relative;
   overflow: hidden;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--gold-300);
+  outline-offset: 3px;
+  box-shadow: 0 0 20px rgba(212, 163, 115, 0.45);
+}
+
+.btn:active {
+  transform: translateY(-1px) scale(0.985);
 }
 
 .btn-gold {
@@ -280,10 +290,34 @@ h1, h2, h3, h4, .font-serif {
   color: var(--bg-primary);
   box-shadow: var(--shadow-gold-button);
 }
+
+/* Subtle warm luxury sheen on gold button */
+.btn-gold::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 80%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.22) 50%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  transition: left 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
 .btn-gold:hover {
   background: var(--gold-gradient-hover);
   transform: translateY(-3px);
-  box-shadow: 0 12px 28px rgba(212, 163, 115, 0.45);
+  box-shadow: 0 14px 30px rgba(212, 163, 115, 0.45), 0 0 22px rgba(212, 163, 115, 0.25);
+}
+
+.btn-gold:hover::before {
+  left: 140%;
 }
 
 .btn-outline {
@@ -293,10 +327,11 @@ h1, h2, h3, h4, .font-serif {
   backdrop-filter: blur(8px);
 }
 .btn-outline:hover {
-  background: rgba(212, 163, 115, 0.15);
+  background: rgba(212, 163, 115, 0.16);
   color: var(--gold-300);
   border-color: var(--gold-300);
   transform: translateY(-3px);
+  box-shadow: 0 10px 26px rgba(212, 163, 115, 0.22), inset 0 0 14px rgba(212, 163, 115, 0.1);
 }
 
 .btn-whatsapp {
@@ -321,10 +356,11 @@ h1, h2, h3, h4, .font-serif {
 }
 
 .btn-icon-arrow {
-  transition: transform var(--trans-fast);
+  display: inline-block;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .btn:hover .btn-icon-arrow {
-  transform: translateX(4px);
+  transform: translateX(6px);
 }
 
 /* ==========================================================================

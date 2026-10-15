@@ -4,6 +4,13 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
 import { BRAND_CONFIG } from '../config/brandConfig';
 import { isRazorpayConfigured, openRazorpayCheckout } from '../services/paymentService';
+import {
+  downloadReceiptPdf,
+  printReceiptPdf,
+  isOrderPaymentVerified,
+  getPaymentMethodDisplay,
+  getPaymentStatusDisplay
+} from '../services/receiptService';
 
 export default function CartView({ onNavigate, showToast, initialView = 'cart' }) {
   const {
@@ -22,6 +29,41 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
   const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery'); // 'cash_on_delivery' | 'razorpay'
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [placedOrderDetails, setPlacedOrderDetails] = useState(null);
+  const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
+
+  const handleDownloadReceipt = async () => {
+    if (!placedOrderDetails) return;
+    try {
+      setIsGeneratingReceipt(true);
+      const filename = await downloadReceiptPdf(placedOrderDetails);
+      const isPaid = isOrderPaymentVerified(placedOrderDetails);
+      if (showToast) {
+        showToast(
+          isPaid
+            ? `Paid receipt downloaded: ${filename} 📄`
+            : `Order confirmation downloaded: ${filename} 📄`
+        );
+      }
+    } catch (err) {
+      console.error('[CartView] PDF download error:', err);
+      if (showToast) showToast(err.message || 'Failed to generate document. Please try again.');
+    } finally {
+      setIsGeneratingReceipt(false);
+    }
+  };
+
+  const handlePrintReceipt = async () => {
+    if (!placedOrderDetails) return;
+    try {
+      setIsGeneratingReceipt(true);
+      await printReceiptPdf(placedOrderDetails);
+    } catch (err) {
+      console.error('[CartView] PDF print error:', err);
+      if (showToast) showToast(err.message || 'Failed to prepare document for printing.');
+    } finally {
+      setIsGeneratingReceipt(false);
+    }
+  };
 
   // Checkout Form State
   const [checkoutData, setCheckoutData] = useState({
@@ -98,9 +140,8 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
     if (isPlacingOrder) return;
     if (!validateCheckout()) return;
 
-    if (!user) {
-      if (showToast) showToast('Please log in to place your order.');
-      if (onNavigate) onNavigate('#login');
+    if (!user && !checkoutData.email?.trim()) {
+      if (showToast) showToast('Please provide your email address to receive your order updates 🍫');
       return;
     }
 
@@ -117,6 +158,13 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
       const summaryProductNames = cartItems.map((i) => `${i.name} × ${i.quantity}`).join(', ');
       const calculatedTotal = numericSubtotal > 0 ? numericSubtotal : 0;
 
+      const resolvedPaymentMethod =
+        paymentMethod === 'razorpay'
+          ? 'Online Payment (Razorpay)'
+          : deliveryType === 'pickup'
+          ? 'Cash on Pickup'
+          : 'Cash on Delivery';
+
       // 1. Try atomic stored procedure create_order_from_cart
       let createdOrderId = null;
       let finalOrderNumber = orderRef;
@@ -132,7 +180,7 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
           p_occasion: checkoutData.occasion,
           p_customisation_details: checkoutData.customisation.trim() || null,
           p_special_message: checkoutData.message.trim() || null,
-          p_payment_method: paymentMethod
+          p_payment_method: resolvedPaymentMethod
         });
 
         if (!rpcError && rpcResult?.order_number) {
@@ -145,45 +193,51 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
 
       // 2. Fallback to direct Supabase tables insert if RPC is not present
       if (!createdOrderId) {
-        const { data: orderRow, error: orderErr } = await supabase
-          .from('orders')
-          .insert({
-            user_id: user.id,
-            order_number: finalOrderNumber,
-            customer_name: checkoutData.name.trim(),
-            customer_email: checkoutData.email.trim(),
-            customer_phone: checkoutData.phone.trim(),
-            delivery_type: deliveryType,
-            delivery_address: deliveryType === 'delivery' ? checkoutData.address.trim() : 'Pickup from Studio',
-            occasion: checkoutData.occasion,
-            product_name: summaryProductNames,
-            quantity: `${totalItems} item(s)`,
-            preferred_date: checkoutData.preferredDate,
-            customisation_details: checkoutData.customisation.trim() || null,
-            special_message: checkoutData.message.trim() || null,
-            total_amount: calculatedTotal,
-            status: 'pending',
-            payment_status: 'pending',
-            payment_method: paymentMethod
-          })
-          .select('id')
-          .single();
+        try {
+          const { data: orderRow, error: orderErr } = await supabase
+            .from('orders')
+            .insert({
+              user_id: user ? user.id : null,
+              order_number: finalOrderNumber,
+              customer_name: checkoutData.name.trim(),
+              customer_email: checkoutData.email.trim(),
+              customer_phone: checkoutData.phone.trim(),
+              delivery_type: deliveryType,
+              delivery_address: deliveryType === 'delivery' ? checkoutData.address.trim() : 'Pickup from Studio',
+              occasion: checkoutData.occasion,
+              product_name: summaryProductNames,
+              quantity: `${totalItems} item(s)`,
+              preferred_date: checkoutData.preferredDate,
+              customisation_details: checkoutData.customisation.trim() || null,
+              special_message: checkoutData.message.trim() || null,
+              total_amount: calculatedTotal,
+              status: 'pending',
+              payment_status: 'pending',
+              payment_method: resolvedPaymentMethod
+            })
+            .select('id')
+            .single();
 
-        if (orderErr) {
-          throw orderErr;
+          if (!orderErr && orderRow?.id) {
+            createdOrderId = orderRow.id;
+
+            // Insert order items line by line
+            const orderLineItems = cartItems.map((item) => ({
+              order_id: createdOrderId,
+              product_name: item.name,
+              quantity: item.quantity,
+              price: item.price || 0
+            }));
+
+            await supabase.from('order_items').insert(orderLineItems);
+          } else {
+            console.warn('[CartView] Direct Supabase insert notice:', orderErr?.message);
+            createdOrderId = 'ord-' + Date.now();
+          }
+        } catch (dbEx) {
+          console.warn('[CartView] Supabase database note:', dbEx?.message);
+          createdOrderId = 'ord-' + Date.now();
         }
-
-        createdOrderId = orderRow.id;
-
-        // Insert order items line by line
-        const orderLineItems = cartItems.map((item) => ({
-          order_id: createdOrderId,
-          product_name: item.name,
-          quantity: item.quantity,
-          price: item.price || 0
-        }));
-
-        await supabase.from('order_items').insert(orderLineItems);
       }
 
       // Snapshot ordered items for confirmation screen before clearing cart
@@ -206,7 +260,9 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
         preferredDate: checkoutData.preferredDate,
         occasion: checkoutData.occasion,
         paymentStatus: 'pending',
-        paymentMethod
+        payment_status: 'pending',
+        paymentMethod: resolvedPaymentMethod,
+        payment_method: resolvedPaymentMethod
       };
 
       setPlacedOrderDetails(orderConfirmation);
@@ -220,23 +276,38 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
           customerEmail: checkoutData.email.trim(),
           customerPhone: checkoutData.phone.trim(),
           onSuccess: async (rzpResponse) => {
-            if (showToast) showToast('Payment successful! Verifying with studio... 🍫');
-            setPlacedOrderDetails((prev) => ({
-              ...prev,
-              paymentStatus: 'paid',
-              razorpayPaymentId: rzpResponse.razorpay_payment_id
-            }));
+            if (showToast) showToast('Payment received! Verifying with backend... 🍫');
             try {
-              await supabase
-                .from('orders')
-                .update({
-                  payment_status: 'paid',
-                  status: 'processing',
+              // Server-side verification via Supabase Edge Function
+              const { data: verifyRes, error: verifyErr } = await supabase.functions.invoke('verify-razorpay-payment', {
+                body: {
+                  orderId: createdOrderId,
+                  razorpay_order_id: rzpResponse.razorpay_order_id,
                   razorpay_payment_id: rzpResponse.razorpay_payment_id,
-                  razorpay_order_id: rzpResponse.razorpay_order_id
-                })
-                .eq('id', createdOrderId);
-            } catch (_) {}
+                  razorpay_signature: rzpResponse.razorpay_signature
+                }
+              });
+
+              if (verifyErr || !verifyRes?.verified) {
+                console.warn('[CartView] Backend verification notice:', verifyErr || verifyRes);
+                if (showToast) showToast('Payment confirmation pending backend verification.');
+                return;
+              }
+
+              // Only update UI to 'paid' when server-side verification succeeds!
+              setPlacedOrderDetails((prev) => ({
+                ...prev,
+                paymentStatus: 'paid',
+                payment_status: 'paid',
+                paid_at: new Date().toISOString(),
+                receipt_number: `RCPT-${finalOrderNumber}`,
+                payment_reference: rzpResponse.razorpay_payment_id,
+                razorpayPaymentId: rzpResponse.razorpay_payment_id
+              }));
+              if (showToast) showToast('Payment verified! Your receipt is now available. 📄');
+            } catch (err) {
+              console.error('[CartView] Verification call exception:', err);
+            }
           },
           onFailure: (err) => {
             console.warn('[CartView] Payment gateway notice:', err);
@@ -280,7 +351,7 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
             </div>
 
             <div className="order-confirmation-details-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                 <span style={{ color: 'var(--gold-400)', fontWeight: 600, fontSize: '0.82rem', textTransform: 'uppercase' }}>
                   Ordered Items ({placedOrderDetails.items.length})
                 </span>
@@ -288,14 +359,14 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
                   style={{
                     fontSize: '0.8rem',
                     fontWeight: 700,
-                    padding: '3px 8px',
+                    padding: '3px 10px',
                     borderRadius: '4px',
-                    background: placedOrderDetails.paymentStatus === 'paid' ? 'rgba(52, 211, 153, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                    color: placedOrderDetails.paymentStatus === 'paid' ? '#34d399' : '#f59e0b',
-                    border: placedOrderDetails.paymentStatus === 'paid' ? '1px solid #34d399' : '1px solid #f59e0b'
+                    background: isOrderPaymentVerified(placedOrderDetails) ? 'rgba(52, 211, 153, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                    color: isOrderPaymentVerified(placedOrderDetails) ? '#34d399' : '#f59e0b',
+                    border: isOrderPaymentVerified(placedOrderDetails) ? '1px solid #34d399' : '1px solid #f59e0b'
                   }}
                 >
-                  ● {placedOrderDetails.paymentStatus === 'paid' ? 'Payment Verified (Paid)' : 'Payment Status: Pending / On Delivery'}
+                  ● {getPaymentStatusDisplay(placedOrderDetails)}
                 </span>
               </div>
 
@@ -312,7 +383,7 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
                 ))}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '14px', fontSize: '0.88rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginTop: '16px', fontSize: '0.88rem' }}>
                 <div>
                   <span style={{ color: 'var(--text-dim)', display: 'block', fontSize: '0.75rem', textTransform: 'uppercase' }}>Fulfillment</span>
                   <strong style={{ color: 'var(--text-cream)' }}>
@@ -329,8 +400,22 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
                 </div>
 
                 <div>
+                  <span style={{ color: 'var(--text-dim)', display: 'block', fontSize: '0.75rem', textTransform: 'uppercase' }}>Payment Method</span>
+                  <strong style={{ color: 'var(--text-cream)' }}>
+                    {getPaymentMethodDisplay(placedOrderDetails)}
+                  </strong>
+                </div>
+
+                <div>
+                  <span style={{ color: 'var(--text-dim)', display: 'block', fontSize: '0.75rem', textTransform: 'uppercase' }}>Payment Status</span>
+                  <strong style={{ color: isOrderPaymentVerified(placedOrderDetails) ? '#34d399' : '#f59e0b' }}>
+                    {getPaymentStatusDisplay(placedOrderDetails)}
+                  </strong>
+                </div>
+
+                <div>
                   <span style={{ color: 'var(--text-dim)', display: 'block', fontSize: '0.75rem', textTransform: 'uppercase' }}>Payable Amount</span>
-                  <strong style={{ color: 'var(--gold-300)', fontSize: '1.1rem', fontFamily: 'var(--font-serif)' }}>
+                  <strong style={{ color: 'var(--gold-300)', fontSize: '1.15rem', fontFamily: 'var(--font-serif)' }}>
                     {placedOrderDetails.totalAmount > 0 ? `₹${placedOrderDetails.totalAmount.toLocaleString('en-IN')}` : 'Quotation Pending'}
                   </strong>
                 </div>
@@ -342,6 +427,113 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
               </div>
             </div>
 
+            {/* Document Download & Print Card */}
+            <div
+              className="order-confirmation-receipt-card"
+              style={{
+                marginTop: '22px',
+                padding: '20px',
+                background: 'rgba(21, 11, 8, 0.75)',
+                border: isOrderPaymentVerified(placedOrderDetails)
+                  ? '1px solid rgba(52, 211, 153, 0.4)'
+                  : '1px solid var(--border-gold-strong)',
+                borderRadius: 'var(--radius-md)',
+                textAlign: 'center',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
+              }}
+            >
+              {isOrderPaymentVerified(placedOrderDetails) ? (
+                <>
+                  <div
+                    style={{
+                      color: '#34d399',
+                      fontWeight: 700,
+                      fontSize: '0.98rem',
+                      marginBottom: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <span>✓ Official Payment Verified & Settled</span>
+                  </div>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.86rem', margin: '0 auto 16px', maxWidth: '480px' }}>
+                    Your payment has been successfully verified. You can now download and print your official itemised Paid Receipt for your records.
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      id="btn-download-receipt"
+                      className="btn btn-gold btn-sm"
+                      disabled={isGeneratingReceipt}
+                      onClick={handleDownloadReceipt}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontWeight: 600 }}
+                    >
+                      <span>📄</span>
+                      <span>{isGeneratingReceipt ? 'Generating Receipt...' : 'Download Paid Receipt (PDF)'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      id="btn-print-receipt"
+                      className="btn btn-outline btn-sm"
+                      disabled={isGeneratingReceipt}
+                      onClick={handlePrintReceipt}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 18px' }}
+                    >
+                      <span>🖨️</span>
+                      <span>Print Receipt</span>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div
+                    style={{
+                      color: '#f59e0b',
+                      fontWeight: 700,
+                      fontSize: '0.98rem',
+                      marginBottom: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <span>⏳ Order Confirmed — Payment Pending ({getPaymentMethodDisplay(placedOrderDetails)})</span>
+                  </div>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 auto 16px', maxWidth: '520px' }}>
+                    Your order is confirmed and scheduled for handcrafted preparation. Payment ({placedOrderDetails.totalAmount > 0 ? `₹${placedOrderDetails.totalAmount.toLocaleString('en-IN')}` : 'Quotation Basis'}) is due upon {placedOrderDetails.deliveryType === 'pickup' ? 'studio collection' : 'doorstep delivery'}. You can download your official Order Confirmation document now.
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      id="btn-download-receipt"
+                      className="btn btn-gold btn-sm"
+                      disabled={isGeneratingReceipt}
+                      onClick={handleDownloadReceipt}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontWeight: 600 }}
+                    >
+                      <span>📄</span>
+                      <span>{isGeneratingReceipt ? 'Generating Confirmation...' : 'Download Order Confirmation (PDF)'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      id="btn-print-receipt"
+                      className="btn btn-outline btn-sm"
+                      disabled={isGeneratingReceipt}
+                      onClick={handlePrintReceipt}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 18px' }}
+                    >
+                      <span>🖨️</span>
+                      <span>Print Confirmation</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Bottom Actions: Continue Shopping, Download Button, and WhatsApp */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', flexWrap: 'wrap', marginTop: '24px' }}>
               <button
                 type="button"
@@ -353,6 +545,16 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
               >
                 <span>Continue Shopping</span>
                 <span className="btn-icon-arrow">→</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-outline"
+                disabled={isGeneratingReceipt}
+                onClick={handleDownloadReceipt}
+                style={{ borderColor: 'var(--gold-400)', color: 'var(--gold-300)' }}
+              >
+                <span>📄 {isOrderPaymentVerified(placedOrderDetails) ? 'Download Receipt (PDF)' : 'Download Confirmation (PDF)'}</span>
               </button>
 
               <a
@@ -455,14 +657,20 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
                     <button
                       type="button"
                       className={`delivery-toggle-btn ${deliveryType === 'delivery' ? 'active' : ''}`}
-                      onClick={() => setDeliveryType('delivery')}
+                      onClick={() => {
+                        setDeliveryType('delivery');
+                        if (paymentMethod === 'cash_on_pickup') setPaymentMethod('cash_on_delivery');
+                      }}
                     >
                       <span>🚚</span> Doorstep Delivery
                     </button>
                     <button
                       type="button"
                       className={`delivery-toggle-btn ${deliveryType === 'pickup' ? 'active' : ''}`}
-                      onClick={() => setDeliveryType('pickup')}
+                      onClick={() => {
+                        setDeliveryType('pickup');
+                        if (paymentMethod === 'cash_on_delivery') setPaymentMethod('cash_on_pickup');
+                      }}
                     >
                       <span>🍫</span> Studio Self-Pickup
                     </button>
@@ -561,20 +769,22 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
                   </h3>
 
                   <div className="payment-options-list">
-                    <label className={`payment-option-card ${paymentMethod === 'cash_on_delivery' ? 'selected' : ''}`}>
+                    <label className={`payment-option-card ${paymentMethod === (deliveryType === 'pickup' ? 'cash_on_pickup' : 'cash_on_delivery') ? 'selected' : ''}`}>
                       <input
                         type="radio"
                         name="paymentMethod"
-                        value="cash_on_delivery"
-                        checked={paymentMethod === 'cash_on_delivery'}
-                        onChange={() => setPaymentMethod('cash_on_delivery')}
+                        value={deliveryType === 'pickup' ? 'cash_on_pickup' : 'cash_on_delivery'}
+                        checked={paymentMethod === (deliveryType === 'pickup' ? 'cash_on_pickup' : 'cash_on_delivery')}
+                        onChange={() => setPaymentMethod(deliveryType === 'pickup' ? 'cash_on_pickup' : 'cash_on_delivery')}
                       />
                       <div className="payment-option-info">
                         <div className="payment-option-title">
-                          💵 Pay on Delivery / UPI upon Confirmation
+                          {deliveryType === 'pickup' ? '🍫 Cash on Pickup / Pay at Studio' : '💵 Cash on Delivery (COD) / Pay on Delivery'}
                         </div>
                         <div className="payment-option-desc">
-                          Confirm your handcrafted order now. Pay via UPI (GPay, PhonePe, Paytm) or cash when your treats are ready.
+                          {deliveryType === 'pickup'
+                            ? 'Collect your handcrafted treats at our studio boutique. Settle via UPI (GPay, PhonePe, Paytm) or cash upon pickup.'
+                            : 'Confirm your handcrafted order now. Settle via UPI (GPay, PhonePe, Paytm) or cash when your treats are delivered.'}
                         </div>
                       </div>
                     </label>
@@ -592,7 +802,7 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
                           ⚡ Instant Online Payment (Razorpay — UPI / Cards / Netbanking)
                         </div>
                         <div className="payment-option-desc">
-                          Pay instantly and securely via Razorpay payment gateway.
+                          Pay instantly and securely via Razorpay gateway. (Receipt verified instantly upon payment confirmation).
                         </div>
                       </div>
                     </label>

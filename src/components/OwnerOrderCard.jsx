@@ -1,9 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
+import {
+  downloadReceiptPdf,
+  printReceiptPdf,
+  isOrderPaymentVerified,
+  fetchOrderForReceipt,
+  formatRupees
+} from '../services/receiptService';
 
-export default function OwnerOrderCard({ ord, onStatusChange, actions }) {
+export default function OwnerOrderCard({ ord, onStatusChange, onVerifyPayment, actions, currentUser }) {
+  const [isProcessingReceipt, setIsProcessingReceipt] = useState(false);
+  const [receiptError, setReceiptError] = useState(null);
+
   const refId = ord.order_number || (ord.id ? ord.id.slice(0, 8).toUpperCase() : 'MCH-ORD');
   const cleanPhone = ord.customer_phone ? ord.customer_phone.replace(/[^0-9]/g, '') : '';
   const formattedDate = ord.created_at ? new Date(ord.created_at).toLocaleDateString() : 'Recent';
+  const isPaid = isOrderPaymentVerified(ord);
+  const totalAmt = Number(ord.total_amount) || 0;
 
   const statusColor =
     ord.status === 'completed'
@@ -14,13 +26,41 @@ export default function OwnerOrderCard({ ord, onStatusChange, actions }) {
       ? '#60a5fa'
       : 'var(--gold-300)';
 
+  const handleDownload = async () => {
+    try {
+      setReceiptError(null);
+      setIsProcessingReceipt(true);
+      const fullOrder = await fetchOrderForReceipt(ord.id || ord.order_number, currentUser || { role: 'owner' });
+      await downloadReceiptPdf(fullOrder);
+    } catch (err) {
+      console.error('[OwnerOrderCard] Download error:', err);
+      setReceiptError(err.message || 'Failed to download receipt.');
+    } finally {
+      setIsProcessingReceipt(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    try {
+      setReceiptError(null);
+      setIsProcessingReceipt(true);
+      const fullOrder = await fetchOrderForReceipt(ord.id || ord.order_number, currentUser || { role: 'owner' });
+      await printReceiptPdf(fullOrder);
+    } catch (err) {
+      console.error('[OwnerOrderCard] Print error:', err);
+      setReceiptError(err.message || 'Failed to print receipt.');
+    } finally {
+      setIsProcessingReceipt(false);
+    }
+  };
+
   return (
     <div
       className="admin-card-box"
       style={{
         marginBottom: '20px',
         background: 'rgba(21, 11, 8, 0.75)',
-        border: '1px solid var(--border-gold)',
+        border: isPaid ? '1px solid rgba(52, 211, 153, 0.3)' : '1px solid var(--border-gold)',
         borderRadius: 'var(--radius-md)',
         padding: '20px',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
@@ -30,7 +70,7 @@ export default function OwnerOrderCard({ ord, onStatusChange, actions }) {
       <div
         style={{
           display: 'flex',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           alignItems: 'flex-start',
           flexWrap: 'wrap',
           gap: '12px',
@@ -48,26 +88,63 @@ export default function OwnerOrderCard({ ord, onStatusChange, actions }) {
           </div>
         </div>
 
-        <div style={{ textAlign: 'right' }}>
-          <span
-            className="badge-tag"
-            style={{
-              background: 'rgba(212, 163, 115, 0.15)',
-              border: `1px solid ${statusColor}`,
-              color: statusColor,
-              textTransform: 'uppercase',
-              fontWeight: 700,
-              padding: '4px 10px',
-              fontSize: '0.78rem'
-            }}
-          >
-            ● {ord.status || 'pending'}
-          </span>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: '4px' }}>
+        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {/* Payment Badge */}
+            <span
+              style={{
+                background: isPaid ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                border: isPaid ? '1px solid #34d399' : '1px solid #f59e0b',
+                color: isPaid ? '#34d399' : '#f59e0b',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+                padding: '3px 8px',
+                borderRadius: '8px',
+                fontSize: '0.74rem'
+              }}
+            >
+              ● {isPaid ? 'Payment Verified' : 'Payment Pending'}
+            </span>
+
+            {/* Fulfillment Status Badge */}
+            <span
+              className="badge-tag"
+              style={{
+                background: 'rgba(212, 163, 115, 0.15)',
+                border: `1px solid ${statusColor}`,
+                color: statusColor,
+                textTransform: 'uppercase',
+                fontWeight: 700,
+                padding: '3px 10px',
+                borderRadius: '8px',
+                fontSize: '0.74rem'
+              }}
+            >
+              {ord.status || 'pending'}
+            </span>
+          </div>
+
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
             Submitted: {formattedDate}
           </div>
         </div>
       </div>
+
+      {receiptError && (
+        <div
+          style={{
+            background: 'rgba(239, 68, 68, 0.15)',
+            border: '1px solid rgba(239, 68, 68, 0.4)',
+            color: '#fca5a5',
+            padding: '8px 12px',
+            borderRadius: '6px',
+            fontSize: '0.82rem',
+            marginBottom: '14px'
+          }}
+        >
+          ⚠️ {receiptError}
+        </div>
+      )}
 
       {/* Grid of Details */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
@@ -140,10 +217,10 @@ export default function OwnerOrderCard({ ord, onStatusChange, actions }) {
 
         <div>
           <div style={{ fontSize: '0.75rem', color: 'var(--gold-400)', textTransform: 'uppercase', fontWeight: 600, marginBottom: '2px' }}>
-            Pricing / Amount
+            Total / Pricing
           </div>
           <div style={{ color: 'var(--gold-300)', fontWeight: 700, fontSize: '1.05rem' }}>
-            {ord.total_amount ? `₹${ord.total_amount}` : 'Quote on request'}
+            {totalAmt > 0 ? formatRupees(totalAmt) : 'Quote on request'}
           </div>
         </div>
       </div>
@@ -178,7 +255,74 @@ export default function OwnerOrderCard({ ord, onStatusChange, actions }) {
         </div>
       )}
 
-      {/* Custom Actions */}
+      {/* Official Receipt Management Bar */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '10px',
+          padding: '12px 14px',
+          background: 'rgba(10, 5, 4, 0.5)',
+          borderRadius: 'var(--radius-sm)',
+          border: '1px solid rgba(212, 163, 115, 0.15)',
+          marginBottom: '14px'
+        }}
+      >
+        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+          {isPaid ? (
+            <span style={{ color: '#34d399', fontWeight: 600 }}>
+              ✓ Verified Paid Receipt (Receipt #: {ord.receipt_number || `RCPT-${refId}`})
+            </span>
+          ) : (
+            <span>
+              Payment Method: <strong>{ord.payment_method || 'Cash on Delivery / Direct'}</strong> (Unsettled)
+            </span>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {isPaid ? (
+            <>
+              <button
+                type="button"
+                className="btn btn-gold btn-sm"
+                disabled={isProcessingReceipt}
+                onClick={handleDownload}
+                style={{ fontSize: '0.76rem', padding: '5px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <span>📄</span>
+                <span>{isProcessingReceipt ? 'Generating...' : 'Download Receipt'}</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                disabled={isProcessingReceipt}
+                onClick={handlePrint}
+                style={{ fontSize: '0.76rem', padding: '5px 10px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <span>🖨️</span>
+                <span>Print</span>
+              </button>
+            </>
+          ) : (
+            onVerifyPayment && (
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                style={{ borderColor: '#34d399', color: '#34d399', fontSize: '0.76rem', padding: '5px 12px' }}
+                onClick={() => onVerifyPayment(ord.id)}
+                title="Mark this order as paid after receiving cash, UPI, or transfer"
+              >
+                💵 Verify & Mark as Paid
+              </button>
+            )
+          )}
+        </div>
+      </div>
+
+      {/* Custom Actions (e.g. Accept, Cancel, Complete) */}
       {actions && (
         <div
           style={{

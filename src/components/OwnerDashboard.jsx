@@ -57,6 +57,42 @@ export default function OwnerDashboard({ onNavigate }) {
     }
   };
 
+  // Verify and mark order payment as paid in Supabase
+  const handleVerifyPayment = async (orderId) => {
+    const paidAt = new Date().toISOString();
+    setOrdersList((prev) =>
+      prev.map((o) => {
+        if (o.id === orderId) {
+          const receiptNum = o.receipt_number || `RCPT-${o.order_number || o.id.slice(0, 8)}`;
+          return {
+            ...o,
+            payment_status: 'paid',
+            paid_at: paidAt,
+            receipt_number: receiptNum
+          };
+        }
+        return o;
+      })
+    );
+    try {
+      const order = ordersList.find((o) => o.id === orderId);
+      const receiptNum = order?.receipt_number || `RCPT-${order?.order_number || orderId.slice(0, 8)}`;
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          payment_status: 'paid',
+          paid_at: paidAt,
+          receipt_number: receiptNum
+        })
+        .eq('id', orderId);
+      if (error) {
+        console.warn('[OwnerDashboard] Payment status update notice:', error.message);
+      }
+    } catch (err) {
+      console.warn('[OwnerDashboard] Payment update exception:', err);
+    }
+  };
+
   const loadOwnerData = async () => {
     setIsLoading(true);
     let errorMessages = [];
@@ -369,7 +405,9 @@ export default function OwnerDashboard({ onNavigate }) {
                 <OwnerOrderCard
                   key={ord.id}
                   ord={ord}
+                  currentUser={user}
                   onStatusChange={handleStatusChange}
+                  onVerifyPayment={handleVerifyPayment}
                   actions={
                     <>
                       <button
@@ -430,7 +468,9 @@ export default function OwnerDashboard({ onNavigate }) {
                 <OwnerOrderCard
                   key={ord.id}
                   ord={ord}
+                  currentUser={user}
                   onStatusChange={handleStatusChange}
+                  onVerifyPayment={handleVerifyPayment}
                   actions={
                     <>
                       <button
@@ -491,7 +531,9 @@ export default function OwnerDashboard({ onNavigate }) {
                 <OwnerOrderCard
                   key={ord.id}
                   ord={ord}
+                  currentUser={user}
                   onStatusChange={handleStatusChange}
+                  onVerifyPayment={handleVerifyPayment}
                 />
               ))
             )}
@@ -533,7 +575,9 @@ export default function OwnerDashboard({ onNavigate }) {
                 <OwnerOrderCard
                   key={ord.id}
                   ord={ord}
+                  currentUser={user}
                   onStatusChange={handleStatusChange}
+                  onVerifyPayment={handleVerifyPayment}
                   actions={
                     <button
                       type="button"

@@ -1,18 +1,123 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../supabaseClient';
+import {
+  downloadReceiptPdf,
+  printReceiptPdf,
+  isOrderPaymentVerified,
+  fetchOrderForReceipt,
+  formatRupees,
+  getPaymentMethodDisplay,
+  getPaymentStatusDisplay
+} from '../services/receiptService';
 
 export default function OrderHistoryModal({ isOpen, onClose, onNavigate }) {
   const { user, getUserOrders } = useAuth();
+  const [dbOrders, setDbOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [receiptLoadingId, setReceiptLoadingId] = useState(null);
+  const [actionError, setActionError] = useState(null);
+
+  // Fetch real database orders for the authenticated customer
+  useEffect(() => {
+    if (!isOpen || !user?.id) return;
+
+    let isMounted = true;
+    setIsLoading(true);
+    setActionError(null);
+
+    async function loadCustomerOrders() {
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*, order_items(*)')
+          .or(`user_id.eq.${user.id},customer_email.ilike.${user.email || ''}`)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.warn('[OrderHistoryModal] Supabase query note:', error.message);
+        }
+
+        if (isMounted) {
+          if (data && data.length > 0) {
+            setDbOrders(data);
+          } else {
+            // Fallback to local context orders if no Supabase rows found
+            setDbOrders([]);
+          }
+        }
+      } catch (err) {
+        console.warn('[OrderHistoryModal] Fetch error:', err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+
+    loadCustomerOrders();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, user]);
 
   if (!isOpen) return null;
 
-  const orders = getUserOrders();
+  // Merge database orders with local storage fallback orders
+  const localOrders = getUserOrders ? getUserOrders() : [];
+  const mergedOrdersMap = new Map();
+
+  // Add DB orders first (ground truth)
+  dbOrders.forEach((o) => {
+    const key = o.order_number || o.id;
+    if (key) mergedOrdersMap.set(key, o);
+  });
+
+  // Supplement with local orders if not already in DB
+  localOrders.forEach((o) => {
+    const key = o.order_number || o.id;
+    if (key && !mergedOrdersMap.has(key)) {
+      mergedOrdersMap.set(key, o);
+    }
+  });
+
+  const orders = Array.from(mergedOrdersMap.values()).sort(
+    (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
+  );
 
   const statusStyles = {
     pending: { background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.4)' },
     processing: { background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.4)' },
     completed: { background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.4)' },
     cancelled: { background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.4)' }
+  };
+
+  const handleDownloadReceipt = async (ord) => {
+    setActionError(null);
+    try {
+      setReceiptLoadingId(ord.id || ord.order_number);
+      // Fetch full order snapshot and enforce security authorization
+      const fullOrder = await fetchOrderForReceipt(ord.id || ord.order_number, user);
+      await downloadReceiptPdf(fullOrder);
+    } catch (err) {
+      console.error('[OrderHistoryModal] Document download error:', err);
+      setActionError(err.message || 'Failed to download document. Please try again.');
+    } finally {
+      setReceiptLoadingId(null);
+    }
+  };
+
+  const handlePrintReceipt = async (ord) => {
+    setActionError(null);
+    try {
+      setReceiptLoadingId(ord.id || ord.order_number);
+      const fullOrder = await fetchOrderForReceipt(ord.id || ord.order_number, user);
+      await printReceiptPdf(fullOrder);
+    } catch (err) {
+      console.error('[OrderHistoryModal] Document print error:', err);
+      setActionError(err.message || 'Failed to prepare document for printing.');
+    } finally {
+      setReceiptLoadingId(null);
+    }
   };
 
   return (
@@ -26,7 +131,7 @@ export default function OrderHistoryModal({ isOpen, onClose, onNavigate }) {
     >
       <div
         className="dialog-card"
-        style={{ maxWidth: '650px', width: '92%', maxHeight: '85vh', overflowY: 'auto' }}
+        style={{ maxWidth: '680px', width: '92%', maxHeight: '88vh', overflowY: 'auto' }}
       >
         <div
           style={{
@@ -39,7 +144,7 @@ export default function OrderHistoryModal({ isOpen, onClose, onNavigate }) {
           }}
         >
           <h3 style={{ fontFamily: 'var(--font-serif)', color: 'var(--gold-300)', margin: 0, fontSize: '1.4rem' }}>
-            📦 My Order History
+            📦 My Order History & Receipts
           </h3>
           <button
             type="button"
@@ -58,11 +163,27 @@ export default function OrderHistoryModal({ isOpen, onClose, onNavigate }) {
           </button>
         </div>
 
+        {actionError && (
+          <div
+            style={{
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid rgba(239, 68, 68, 0.4)',
+              color: '#fca5a5',
+              padding: '10px 14px',
+              borderRadius: '6px',
+              fontSize: '0.86rem',
+              marginBottom: '16px'
+            }}
+          >
+            ⚠️ {actionError}
+          </div>
+        )}
+
         <div id="order-history-content">
           {!user ? (
-            <div style={{ textAlign: 'center', padding: '20px' }}>
+            <div style={{ textAlign: 'center', padding: '24px' }}>
               <p style={{ color: 'var(--text-muted)', marginBottom: '14px' }}>
-                Please login to view your order history.
+                Please log in to view your verified orders and download receipts.
               </p>
               <button
                 type="button"
@@ -75,6 +196,10 @@ export default function OrderHistoryModal({ isOpen, onClose, onNavigate }) {
                 Login Now
               </button>
             </div>
+          ) : isLoading ? (
+            <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
+              Loading your verified orders and receipts...
+            </div>
           ) : orders.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '30px 10px' }}>
               <div style={{ fontSize: '2.2rem', marginBottom: '10px' }}>🧾</div>
@@ -82,96 +207,210 @@ export default function OrderHistoryModal({ isOpen, onClose, onNavigate }) {
                 No orders found yet
               </p>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '18px' }}>
-                Place your first order using the Custom Order enquiry form!
+                Explore our handcrafted creations or place a custom order!
               </p>
               <button
                 type="button"
                 className="btn btn-gold btn-sm"
                 onClick={() => {
                   onClose();
-                  if (onNavigate) onNavigate('#custom-order');
+                  if (onNavigate) onNavigate('#creations');
                 }}
               >
-                Order Now
+                Explore Creations
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {orders.map((ord) => {
-                const style = statusStyles[ord.status] || statusStyles.pending;
+                const isPaid = isOrderPaymentVerified(ord);
+                const orderKey = ord.id || ord.order_number;
+                const isProcessingThis = receiptLoadingId === orderKey;
+                const statusStyle = statusStyles[ord.status] || statusStyles.pending;
                 const formattedDate = ord.created_at
-                  ? new Date(ord.created_at).toLocaleDateString('en-US', {
+                  ? new Date(ord.created_at).toLocaleDateString('en-IN', {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric'
                     })
                   : '';
+                const totalAmt = Number(ord.total_amount) || 0;
 
                 return (
                   <div
-                    key={ord.id || ord.order_number}
+                    key={orderKey}
                     style={{
-                      background: 'rgba(21, 11, 8, 0.7)',
-                      border: '1px solid var(--border-gold)',
+                      background: 'rgba(21, 11, 8, 0.75)',
+                      border: isPaid ? '1px solid rgba(52, 211, 153, 0.35)' : '1px solid var(--border-gold)',
                       borderRadius: 'var(--radius-md)',
-                      padding: '16px'
+                      padding: '16px',
+                      boxShadow: '0 4px 14px rgba(0,0,0,0.25)'
                     }}
                   >
+                    {/* Header Row: Order Number, Date, Status */}
                     <div
                       style={{
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'flex-start',
-                        marginBottom: '8px'
+                        flexWrap: 'wrap',
+                        gap: '8px',
+                        marginBottom: '10px'
                       }}
                     >
                       <div>
                         <span style={{ fontWeight: 700, color: 'var(--gold-300)', fontSize: '1.05rem' }}>
-                          {ord.order_number}
+                          {ord.order_number || ord.id?.slice(0, 8)}
                         </span>
                         <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginLeft: '10px' }}>
                           {formattedDate}
                         </span>
                       </div>
-                      <span
-                        style={{
-                          padding: '2px 10px',
-                          borderRadius: '12px',
-                          fontSize: '0.76rem',
-                          fontWeight: 700,
-                          textTransform: 'uppercase',
-                          ...style
-                        }}
-                      >
-                        {ord.status}
+
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        {/* Payment Status Badge */}
+                        <span
+                          style={{
+                            padding: '3px 8px',
+                            borderRadius: '10px',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            background: isPaid ? 'rgba(16, 185, 129, 0.18)' : 'rgba(245, 158, 11, 0.15)',
+                            color: isPaid ? '#34d399' : '#f59e0b',
+                            border: isPaid ? '1px solid #34d399' : '1px solid #f59e0b'
+                          }}
+                        >
+                          ● {getPaymentStatusDisplay(ord)}
+                        </span>
+
+                        {/* Fulfillment Status Badge */}
+                        <span
+                          style={{
+                            padding: '3px 8px',
+                            borderRadius: '10px',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            ...statusStyle
+                          }}
+                        >
+                          {ord.status || 'pending'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Order Details Body */}
+                    <div style={{ fontSize: '0.88rem', color: 'var(--text-cream)', marginBottom: '4px' }}>
+                      <strong>Items:</strong> {ord.product_name || ord.category || 'Handcrafted Confectionery'}{' '}
+                      {ord.quantity ? `(${ord.quantity})` : ''}
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', fontSize: '0.85rem' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>
+                        Fulfillment: {ord.delivery_type === 'pickup' ? '🍫 Studio Pickup' : '🚚 Doorstep Delivery'}
+                      </span>
+                      <span style={{ color: 'var(--gold-300)', fontWeight: 700 }}>
+                        {totalAmt > 0 ? formatRupees(totalAmt) : 'Quotation Basis'}
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.9rem', color: 'var(--text-cream)', marginBottom: '4px' }}>
-                      <strong>Category:</strong> {ord.category || 'General'}
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', fontSize: '0.82rem', flexWrap: 'wrap', gap: '6px' }}>
+                      <span style={{ color: 'var(--text-dim)' }}>
+                        Payment Method: <strong style={{ color: 'var(--text-cream)' }}>{getPaymentMethodDisplay(ord)}</strong>
+                      </span>
+                      <span style={{ color: isPaid ? '#34d399' : '#f59e0b', fontWeight: 600 }}>
+                        {getPaymentStatusDisplay(ord)}
+                      </span>
                     </div>
-                    <div style={{ fontSize: '0.86rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                      <strong>Quantity / Option:</strong> {ord.quantity || 'Standard'}
-                    </div>
-                    {ord.preferred_date && (
-                      <div style={{ fontSize: '0.86rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                        <strong>Preferred Date:</strong> {ord.preferred_date}
-                      </div>
-                    )}
+
                     {ord.custom_message && (
                       <div
                         style={{
-                          fontSize: '0.84rem',
+                          fontSize: '0.82rem',
                           color: 'var(--text-dim)',
                           fontStyle: 'italic',
-                          marginTop: '6px',
-                          background: 'rgba(0,0,0,0.3)',
-                          padding: '8px',
+                          marginTop: '8px',
+                          background: 'rgba(0,0,0,0.25)',
+                          padding: '6px 10px',
                           borderRadius: '4px'
                         }}
                       >
                         "{ord.custom_message}"
                       </div>
                     )}
+
+                    {/* Receipt / Document Action Footer */}
+                    <div
+                      style={{
+                        marginTop: '14px',
+                        paddingTop: '12px',
+                        borderTop: '1px solid rgba(212, 163, 115, 0.18)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '10px'
+                      }}
+                    >
+                      {isPaid ? (
+                        <>
+                          <span style={{ color: '#34d399', fontSize: '0.78rem', fontWeight: 600 }}>
+                            ✓ Payment Verified: Official Receipt Ready
+                          </span>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              type="button"
+                              className="btn btn-gold btn-sm"
+                              disabled={isProcessingThis}
+                              onClick={() => handleDownloadReceipt(ord)}
+                              style={{ fontSize: '0.76rem', padding: '5px 12px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                            >
+                              <span>📄</span>
+                              <span>{isProcessingThis ? 'Preparing...' : 'Download Paid Receipt (PDF)'}</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-outline btn-sm"
+                              disabled={isProcessingThis}
+                              onClick={() => handlePrintReceipt(ord)}
+                              style={{ fontSize: '0.76rem', padding: '5px 10px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                            >
+                              <span>🖨️</span>
+                              <span>Print</span>
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <span style={{ color: '#f59e0b', fontSize: '0.78rem', fontStyle: 'italic' }}>
+                            ⏳ Payment Pending ({getPaymentMethodDisplay(ord)})
+                          </span>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              type="button"
+                              className="btn btn-gold btn-sm"
+                              disabled={isProcessingThis}
+                              onClick={() => handleDownloadReceipt(ord)}
+                              style={{ fontSize: '0.76rem', padding: '5px 12px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                            >
+                              <span>📄</span>
+                              <span>{isProcessingThis ? 'Preparing...' : 'Download Order Confirmation (PDF)'}</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-outline btn-sm"
+                              disabled={isProcessingThis}
+                              onClick={() => handlePrintReceipt(ord)}
+                              style={{ fontSize: '0.76rem', padding: '5px 10px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                            >
+                              <span>🖨️</span>
+                              <span>Print</span>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 );
               })}
