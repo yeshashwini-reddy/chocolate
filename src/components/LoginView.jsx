@@ -61,40 +61,21 @@ export default function LoginView({ onNavigate, initialTab = 'login' }) {
 
     if (!res.success) {
       const clean = loginEmail.trim().toLowerCase();
-      const isAdminOrOwner =
-        clean === DEMO_CREDENTIALS.admin.email.toLowerCase() ||
-        clean === DEMO_CREDENTIALS.owner.email.toLowerCase();
-
       if (res.message && res.message.toLowerCase().includes('email not confirmed')) {
-        if (isAdminOrOwner) {
-          setLoginError('⚠️ Internal demo account email is not confirmed in Supabase. Please verify account confirmation in Supabase.');
-          return;
-        }
         setPendingOtpEmail(clean);
         sessionStorage.setItem('mch_pending_otp_email', clean);
         return;
       }
       setLoginError(`⚠️ ${res.message}`);
     } else {
-      const role = res.role || 'user';
-      const clean = loginEmail.trim().toLowerCase();
+      const role = res.role || res.user?.role || 'user';
 
-      // Guard: Admin and Owner accounts must NEVER route to customer home
-      if (clean === DEMO_CREDENTIALS.admin.email.toLowerCase() && role !== 'admin') {
-        setLoginError(`⚠️ Role mismatch: Authenticated account role in public.profiles is "${role}", expected "admin".`);
-        return;
-      }
-      if (clean === DEMO_CREDENTIALS.owner.email.toLowerCase() && role !== 'owner') {
-        setLoginError(`⚠️ Role mismatch: Authenticated account role in public.profiles is "${role}", expected "owner".`);
-        return;
-      }
-
-      if (role === 'admin') {
-        if (onNavigate) onNavigate('#admin');
-        else window.location.hash = '#admin';
-      } else if (role === 'owner') {
+      if (role === 'owner') {
         if (onNavigate) onNavigate('#owner');
         else window.location.hash = '#owner';
+      } else if (role === 'admin') {
+        if (onNavigate) onNavigate('#admin');
+        else window.location.hash = '#admin';
       } else {
         if (onNavigate) onNavigate('#home');
         else window.location.hash = '#home';
@@ -124,12 +105,12 @@ export default function LoginView({ onNavigate, initialTab = 'login' }) {
     sessionStorage.removeItem('mch_pending_otp_email');
     setPendingOtpEmail('');
 
-    if (role === 'admin') {
-      if (onNavigate) onNavigate('#admin');
-      else window.location.hash = '#admin';
-    } else if (role === 'owner') {
+    if (role === 'owner') {
       if (onNavigate) onNavigate('#owner');
       else window.location.hash = '#owner';
+    } else if (role === 'admin') {
+      if (onNavigate) onNavigate('#admin');
+      else window.location.hash = '#admin';
     } else {
       if (onNavigate) onNavigate('#home');
       else window.location.hash = '#home';
@@ -165,14 +146,17 @@ export default function LoginView({ onNavigate, initialTab = 'login' }) {
         return;
       }
 
-      const role = res.role || 'user';
-      if (role !== 'admin') {
-        setLoginError(`⚠️ Access restricted: Account role in public.profiles is "${role}", expected "admin".`);
-        return;
+      const role = res.role || res.user?.role || 'user';
+      if (role === 'owner') {
+        if (onNavigate) onNavigate('#owner');
+        else window.location.hash = '#owner';
+      } else if (role === 'admin') {
+        if (onNavigate) onNavigate('#admin');
+        else window.location.hash = '#admin';
+      } else {
+        if (onNavigate) onNavigate('#home');
+        else window.location.hash = '#home';
       }
-
-      if (onNavigate) onNavigate('#admin');
-      else window.location.hash = '#admin';
     } catch (err) {
       setIsLoading(false);
       setLoginError(`⚠️ ${err.message || 'Admin login failed.'}`);
@@ -201,14 +185,17 @@ export default function LoginView({ onNavigate, initialTab = 'login' }) {
         return;
       }
 
-      const role = res.role || 'user';
-      if (role !== 'owner') {
-        setLoginError(`⚠️ Access restricted: Account role in public.profiles is "${role}", expected "owner".`);
-        return;
+      const role = res.role || res.user?.role || 'user';
+      if (role === 'owner') {
+        if (onNavigate) onNavigate('#owner');
+        else window.location.hash = '#owner';
+      } else if (role === 'admin') {
+        if (onNavigate) onNavigate('#admin');
+        else window.location.hash = '#admin';
+      } else {
+        if (onNavigate) onNavigate('#home');
+        else window.location.hash = '#home';
       }
-
-      if (onNavigate) onNavigate('#owner');
-      else window.location.hash = '#owner';
     } catch (err) {
       setIsLoading(false);
       setLoginError(`⚠️ ${err.message || 'Owner login failed.'}`);

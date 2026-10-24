@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { BRAND_CONFIG } from '../config/brandConfig';
+import { useProducts } from '../context/ProductContext';
 import AddToCartButton from './AddToCartButton';
 
 export default function ChocolatesSection({ onEnquireProduct, activeFilter: externalFilter, showToast }) {
   const [filter, setFilter] = useState(externalFilter || 'all');
   const [selectedFlavours, setSelectedFlavours] = useState({});
   const [selectedOccasions, setSelectedOccasions] = useState({});
+  const { chocolates: liveChocolates } = useProducts();
+
+  const chocolateList = liveChocolates && liveChocolates.length > 0 ? liveChocolates : BRAND_CONFIG.chocolates;
 
   // If external filter changes, respect it
   React.useEffect(() => {
@@ -61,7 +65,7 @@ export default function ChocolatesSection({ onEnquireProduct, activeFilter: exte
     });
   };
 
-  const filteredChocolates = BRAND_CONFIG.chocolates.filter((prod) => {
+  const filteredChocolates = chocolateList.filter((prod) => {
     if (filter === 'all') return true;
     return prod.category === filter;
   });
@@ -167,6 +171,16 @@ export default function ChocolatesSection({ onEnquireProduct, activeFilter: exte
                     }}
                   />
                   <div className="product-tags-row">
+                    {(!prod.available || !prod.is_available) && (
+                      <span className="badge-tag" style={{ background: '#dc2626', color: '#fff', fontWeight: 700 }}>
+                        OUT OF STOCK
+                      </span>
+                    )}
+                    {prod.needsPricing && (
+                      <span className="badge-tag" style={{ background: 'rgba(212, 163, 115, 0.25)', color: 'var(--gold-300)' }}>
+                        ENQUIRY ONLY
+                      </span>
+                    )}
                     {prod.badge && (
                       <span className="badge-tag badge-gold badge-special">{prod.badge}</span>
                     )}
@@ -250,7 +264,7 @@ export default function ChocolatesSection({ onEnquireProduct, activeFilter: exte
 
                     <div className="product-price-section">
                       <span className="price-overhead-label">PRICE</span>
-                      <span className="price-amount">{prod.priceTag || 'Price on Request'}</span>
+                      <span className="price-amount">{prod.priceTag || (prod.price > 0 ? `₹${prod.price}` : 'Price on Request')}</span>
                     </div>
 
                     <div className="product-card-actions">
@@ -272,12 +286,43 @@ export default function ChocolatesSection({ onEnquireProduct, activeFilter: exte
                         {prod.actionText || 'Customise & Enquire'}
                       </button>
 
-                      <AddToCartButton
-                        product={prod}
-                        options={{ selectedFlavour, selectedOccasion }}
-                        showToast={showToast}
-                        className="btn-card-add-cart"
-                      />
+                      {(!prod.available || !prod.is_available) ? (
+                        <button
+                          type="button"
+                          className="btn-card-add-cart disabled"
+                          disabled
+                          style={{ opacity: 0.6, cursor: 'not-allowed', background: '#374151', color: '#9ca3af', border: 'none' }}
+                          title="Currently out of stock"
+                        >
+                          Out of Stock
+                        </button>
+                      ) : prod.needsPricing ? (
+                        <button
+                          type="button"
+                          className="btn-card-add-cart"
+                          style={{ fontSize: '0.78rem' }}
+                          onClick={() => {
+                            if (onEnquireProduct) {
+                              onEnquireProduct({
+                                product: prod.name,
+                                category: prod.categoryLabel || 'Chocolates',
+                                type: prod.type,
+                                selectedFlavour,
+                                selectedOccasion
+                              });
+                            }
+                          }}
+                        >
+                          Enquire Price
+                        </button>
+                      ) : (
+                        <AddToCartButton
+                          product={prod}
+                          options={{ selectedFlavour, selectedOccasion }}
+                          showToast={showToast}
+                          className="btn-card-add-cart"
+                        />
+                      )}
                     </div>
                   </div>
                 </div>

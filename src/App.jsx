@@ -48,7 +48,16 @@ const routeViewMap = {
 };
 
 export default function App() {
-  const { user, isInitialized } = useAuth();
+  const {
+    user,
+    role,
+    isInitialized,
+    isLoading,
+    profileLoading,
+    profileError,
+    logout,
+    refreshProfile
+  } = useAuth();
   const [currentHash, setCurrentHash] = useState(window.location.hash || '');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isOrderHistoryOpen, setIsOrderHistoryOpen] = useState(false);
@@ -163,8 +172,10 @@ export default function App() {
     setIsConfirmationOpen(true);
   };
 
-  // Prevent flashing or falling back while session/profile is loading on page load or refresh
-  if (!isInitialized) {
+  // Wait for profile loading before rendering a dashboard or customer homepage
+  const isAuthWaiting = !isInitialized || isLoading || profileLoading;
+
+  if (isAuthWaiting) {
     return (
       <div className="app-root" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#120b08' }}>
         <div style={{ textAlign: 'center', color: 'var(--gold-300)' }}>
@@ -175,9 +186,54 @@ export default function App() {
     );
   }
 
+  // Display authentication / profile query errors without silently converting to customer role
+  if (profileError && activeView !== 'view-login') {
+    return (
+      <div className="app-root" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#120b08', padding: '24px' }}>
+        <div style={{
+          maxWidth: '520px',
+          width: '100%',
+          background: 'rgba(35, 17, 10, 0.95)',
+          border: '1px solid var(--gold-400)',
+          borderRadius: 'var(--radius-md)',
+          padding: '32px',
+          textAlign: 'center',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.6)'
+        }}>
+          <div style={{ fontSize: '3rem', marginBottom: '16px' }}>⚠️</div>
+          <h2 style={{ fontFamily: 'Cinzel, serif', color: 'var(--gold-300)', marginBottom: '12px' }}>Authentication Error</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: '20px', lineHeight: '1.5' }}>
+            {profileError}
+          </p>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-gold"
+              onClick={() => refreshProfile && refreshProfile()}
+            >
+              🔄 Retry
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={async () => {
+                await logout();
+                navigateTo('#login');
+              }}
+            >
+              🚪 Sign Out & Return to Login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const effectiveRole = role || user?.role || null;
+
   // Strict role-based route protection: Render dedicated dashboards when on #admin or #owner routes
   if (activeView === 'view-admin') {
-    if (user?.role !== 'admin') {
+    if (effectiveRole !== 'admin') {
       if (!user) navigateTo('#login');
       else navigateTo('#home');
       return null;
@@ -191,7 +247,7 @@ export default function App() {
   }
 
   if (activeView === 'view-owner') {
-    if (user?.role !== 'owner') {
+    if (effectiveRole !== 'owner') {
       if (!user) navigateTo('#login');
       else navigateTo('#home');
       return null;

@@ -33,9 +33,10 @@ export function CartProvider({ children }) {
 
   /**
    * Helper to get user-specific storage key for isolated fallback
-   * Customer A and Customer B NEVER share storage keys.
+   * Using sessionStorage ensures cart caching is strictly tab-isolated
+   * and never leaks or collides across browser tabs.
    */
-  const getUserStorageKey = (uid) => `mch_isolated_cart_${uid}`;
+  const getUserStorageKey = (uid) => `mch_tab_cart_${uid}`;
 
   /**
    * Fetch or initialize cart from Supabase for the authenticated user
@@ -111,7 +112,7 @@ export function CartProvider({ children }) {
 
       setCartItems(formatted);
       try {
-        localStorage.setItem(getUserStorageKey(uid), JSON.stringify(formatted));
+        sessionStorage.setItem(getUserStorageKey(uid), JSON.stringify(formatted));
       } catch (_) {}
     } catch (err) {
       // Graceful customer-isolated fallback if database table is pending migration
@@ -120,7 +121,7 @@ export function CartProvider({ children }) {
 
       if (currentUserIdRef.current === uid) {
         try {
-          const cached = localStorage.getItem(getUserStorageKey(uid));
+          const cached = sessionStorage.getItem(getUserStorageKey(uid));
           setCartItems(cached ? JSON.parse(cached) : []);
         } catch (_) {
           setCartItems([]);
@@ -135,13 +136,20 @@ export function CartProvider({ children }) {
 
   /**
    * Monitor authentication changes
-   * CRITICAL REQUIREMENT:
-   * - When user logs in: fetch their cart.
-   * - When user logs out: immediately clear frontend state and cached active user data.
-   * - When Customer A logs out and Customer B logs in: never leak Customer A's items to Customer B.
+   * - When user logs in: load their user-isolated cart.
+   * - When account changes: clear previous user's cart from React state immediately before loading next user.
+   * - When user logs out: safely remove ONLY the logging-out user's local cart cache without touching other accounts.
    */
   useEffect(() => {
+    const prevUserId = currentUserIdRef.current;
+
     if (!user) {
+      // Safe cleanup on logout: remove ONLY the logging-out user's tab cart cache
+      if (prevUserId) {
+        try {
+          sessionStorage.removeItem(getUserStorageKey(prevUserId));
+        } catch (_) {}
+      }
       currentUserIdRef.current = null;
       setCartItems([]);
       setCartId(null);
@@ -149,10 +157,11 @@ export function CartProvider({ children }) {
       setIsLoadingCart(false);
       setCartError(null);
     } else {
-      if (currentUserIdRef.current !== user.id) {
+      if (prevUserId !== user.id) {
         // Clear previous user's cart state immediately before loading new user
         setCartItems([]);
         setCartId(null);
+        setIsLoadingCart(true);
         loadUserCart(user);
       }
     }
@@ -216,7 +225,7 @@ export function CartProvider({ children }) {
 
       setCartItems(nextItems);
       try {
-        localStorage.setItem(getUserStorageKey(uid), JSON.stringify(nextItems));
+        sessionStorage.setItem(getUserStorageKey(uid), JSON.stringify(nextItems));
       } catch (_) {}
 
       // Synchronize with Supabase database if active
@@ -282,7 +291,7 @@ export function CartProvider({ children }) {
 
     setCartItems(nextItems);
     try {
-      localStorage.setItem(getUserStorageKey(uid), JSON.stringify(nextItems));
+      sessionStorage.setItem(getUserStorageKey(uid), JSON.stringify(nextItems));
     } catch (_) {}
 
     if (cartId && isDbCartActive) {
@@ -308,7 +317,7 @@ export function CartProvider({ children }) {
     const nextItems = cartItems.filter((item) => item.cartItemId !== cartItemId);
     setCartItems(nextItems);
     try {
-      localStorage.setItem(getUserStorageKey(uid), JSON.stringify(nextItems));
+      sessionStorage.setItem(getUserStorageKey(uid), JSON.stringify(nextItems));
     } catch (_) {}
 
     if (cartId && isDbCartActive) {
@@ -333,7 +342,7 @@ export function CartProvider({ children }) {
 
     setCartItems([]);
     try {
-      localStorage.removeItem(getUserStorageKey(uid));
+      sessionStorage.removeItem(getUserStorageKey(uid));
     } catch (_) {}
 
     if (cartId && isDbCartActive) {

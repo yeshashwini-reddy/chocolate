@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { BRAND_CONFIG } from '../config/brandConfig';
+import { useProducts } from '../context/ProductContext';
 import AddToCartButton from './AddToCartButton';
 
 export default function CakesAndBakesSection({ onEnquireProduct, activeFilter: externalFilter, showToast }) {
   const [filter, setFilter] = useState(externalFilter || 'all');
+  const { cakesAndBakes: liveBakes } = useProducts();
+
+  const bakesList = liveBakes && liveBakes.length > 0 ? liveBakes : BRAND_CONFIG.cakesAndBakes;
 
   React.useEffect(() => {
     if (externalFilter) {
@@ -11,7 +15,7 @@ export default function CakesAndBakesSection({ onEnquireProduct, activeFilter: e
     }
   }, [externalFilter]);
 
-  const filteredBakes = BRAND_CONFIG.cakesAndBakes.filter((prod) => {
+  const filteredBakes = bakesList.filter((prod) => {
     if (filter === 'all') return true;
     return prod.category === filter;
   });
@@ -84,9 +88,27 @@ export default function CakesAndBakesSection({ onEnquireProduct, activeFilter: e
               data-category={prod.category}
             >
               <div className="product-img-box">
-                <img src={prod.image} alt={prod.name} loading="lazy" />
+                <img
+                  src={prod.image}
+                  alt={prod.name}
+                  loading="lazy"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = 'assets/images/custom_cake_chocolate.jpg';
+                  }}
+                />
                 <div className="product-tags-row">
-                  {prod.tags.map((tag, tIdx) => (
+                  {(!prod.available || !prod.is_available) && (
+                    <span className="badge-tag" style={{ background: '#dc2626', color: '#fff', fontWeight: 700 }}>
+                      OUT OF STOCK
+                    </span>
+                  )}
+                  {prod.needsPricing && (
+                    <span className="badge-tag" style={{ background: 'rgba(212, 163, 115, 0.25)', color: 'var(--gold-300)' }}>
+                      ENQUIRY ONLY
+                    </span>
+                  )}
+                  {prod.tags && prod.tags.map((tag, tIdx) => (
                     <span key={tIdx} className="badge-tag badge-gold">
                       {tag}
                     </span>
@@ -104,7 +126,7 @@ export default function CakesAndBakesSection({ onEnquireProduct, activeFilter: e
 
                   <div className="product-price-section">
                     <span className="price-overhead-label">PRICE</span>
-                    <span className="price-amount">{prod.priceTag || (prod.price ? `₹${prod.price}` : 'Price on Request')}</span>
+                    <span className="price-amount">{prod.priceTag || (prod.price > 0 ? `₹${prod.price}` : 'Price on Request')}</span>
                   </div>
 
                   <div className="product-card-actions">
@@ -122,11 +144,40 @@ export default function CakesAndBakesSection({ onEnquireProduct, activeFilter: e
                     >
                       Customise & Enquire
                     </button>
-                    <AddToCartButton
-                      product={prod}
-                      showToast={showToast}
-                      className="btn-card-add-cart"
-                    />
+
+                    {(!prod.available || !prod.is_available) ? (
+                      <button
+                        type="button"
+                        className="btn-card-add-cart disabled"
+                        disabled
+                        style={{ opacity: 0.6, cursor: 'not-allowed', background: '#374151', color: '#9ca3af', border: 'none' }}
+                        title="Currently out of stock"
+                      >
+                        Out of Stock
+                      </button>
+                    ) : prod.needsPricing ? (
+                      <button
+                        type="button"
+                        className="btn-card-add-cart"
+                        style={{ fontSize: '0.78rem' }}
+                        onClick={() => {
+                          if (onEnquireProduct) {
+                            onEnquireProduct({
+                              product: prod.name,
+                              category: prod.categoryLabel || 'Cakes'
+                            });
+                          }
+                        }}
+                      >
+                        Enquire Price
+                      </button>
+                    ) : (
+                      <AddToCartButton
+                        product={prod}
+                        showToast={showToast}
+                        className="btn-card-add-cart"
+                      />
+                    )}
                   </div>
                 </div>
               </div>
@@ -137,3 +188,4 @@ export default function CakesAndBakesSection({ onEnquireProduct, activeFilter: e
     </section>
   );
 }
+

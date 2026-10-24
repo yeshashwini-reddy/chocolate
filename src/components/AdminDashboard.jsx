@@ -4,7 +4,7 @@ import { BRAND_CONFIG } from '../config/brandConfig';
 import { supabase } from '../supabaseClient';
 
 export default function AdminDashboard({ onNavigate }) {
-  const { user, orders: fallbackOrders, logout } = useAuth();
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('products');
   const [ordersList, setOrdersList] = useState([]);
   const [customersList, setCustomersList] = useState([]);
@@ -33,12 +33,10 @@ export default function AdminDashboard({ onNavigate }) {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (ordErr || !dbOrders || dbOrders.length === 0) {
-        if (ordErr) {
-          console.warn('[AdminDashboard] Orders fetch note:', ordErr.message);
-          errorMessages.push(`Orders: ${ordErr.message}`);
-        }
-        setOrdersList(fallbackOrders || []);
+      if (ordErr) {
+        console.warn('[AdminDashboard] Orders fetch note:', ordErr.message);
+        errorMessages.push(`Orders: ${ordErr.message}`);
+        setOrdersList([]);
       } else {
         setOrdersList(dbOrders || []);
       }

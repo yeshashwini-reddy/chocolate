@@ -12,77 +12,52 @@ import {
 } from '../services/receiptService';
 
 export default function OrderHistoryModal({ isOpen, onClose, onNavigate }) {
-  const { user, getUserOrders } = useAuth();
-  const [dbOrders, setDbOrders] = useState([]);
+  const { user } = useAuth();
+  const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
   const [receiptLoadingId, setReceiptLoadingId] = useState(null);
   const [actionError, setActionError] = useState(null);
 
-  // Fetch real database orders for the authenticated customer
-  useEffect(() => {
-    if (!isOpen || !user?.id) return;
+  // Fetch real database orders strictly for the authenticated customer
+  const loadCustomerOrders = async () => {
+    if (!user?.id) return;
 
-    let isMounted = true;
     setIsLoading(true);
     setActionError(null);
+    setFetchError(null);
 
-    async function loadCustomerOrders() {
-      try {
-        const { data, error } = await supabase
-          .from('orders')
-          .select('*, order_items(*)')
-          .or(`user_id.eq.${user.id},customer_email.ilike.${user.email || ''}`)
-          .order('created_at', { ascending: false });
+    try {
+      // Query strictly scoped to the authenticated customer's user_id according to RLS policies
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*, order_items(*)')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-        if (error) {
-          console.warn('[OrderHistoryModal] Supabase query note:', error.message);
-        }
-
-        if (isMounted) {
-          if (data && data.length > 0) {
-            setDbOrders(data);
-          } else {
-            // Fallback to local context orders if no Supabase rows found
-            setDbOrders([]);
-          }
-        }
-      } catch (err) {
-        console.warn('[OrderHistoryModal] Fetch error:', err);
-      } finally {
-        if (isMounted) setIsLoading(false);
+      if (error) {
+        console.error('[OrderHistoryModal] Supabase query error:', error.message);
+        setFetchError(error.message);
+        setOrders([]);
+      } else {
+        setFetchError(null);
+        setOrders(data || []);
       }
+    } catch (err) {
+      console.error('[OrderHistoryModal] Fetch exception:', err);
+      setFetchError(err.message || 'Failed to load orders.');
+      setOrders([]);
+    } finally {
+      setIsLoading(false);
     }
+  };
 
+  useEffect(() => {
+    if (!isOpen || !user?.id) return;
     loadCustomerOrders();
-
-    return () => {
-      isMounted = false;
-    };
   }, [isOpen, user]);
 
   if (!isOpen) return null;
-
-  // Merge database orders with local storage fallback orders
-  const localOrders = getUserOrders ? getUserOrders() : [];
-  const mergedOrdersMap = new Map();
-
-  // Add DB orders first (ground truth)
-  dbOrders.forEach((o) => {
-    const key = o.order_number || o.id;
-    if (key) mergedOrdersMap.set(key, o);
-  });
-
-  // Supplement with local orders if not already in DB
-  localOrders.forEach((o) => {
-    const key = o.order_number || o.id;
-    if (key && !mergedOrdersMap.has(key)) {
-      mergedOrdersMap.set(key, o);
-    }
-  });
-
-  const orders = Array.from(mergedOrdersMap.values()).sort(
-    (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
-  );
 
   const statusStyles = {
     pending: { background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.4)' },
@@ -199,6 +174,23 @@ export default function OrderHistoryModal({ isOpen, onClose, onNavigate }) {
           ) : isLoading ? (
             <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
               Loading your verified orders and receipts...
+            </div>
+          ) : fetchError ? (
+            <div style={{ textAlign: 'center', padding: '30px 10px', color: '#f87171' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '10px' }}>⚠️</div>
+              <p style={{ fontWeight: 600, fontSize: '1.05rem', marginBottom: '6px' }}>
+                Failed to load your orders
+              </p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '18px' }}>
+                {fetchError}
+              </p>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={loadCustomerOrders}
+              >
+                🔄 Retry
+              </button>
             </div>
           ) : orders.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '30px 10px' }}>

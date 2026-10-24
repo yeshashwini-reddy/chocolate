@@ -11,6 +11,7 @@ import {
   getPaymentMethodDisplay,
   getPaymentStatusDisplay
 } from '../services/receiptService';
+import { fetchLiveProducts } from '../services/productService';
 
 export default function CartView({ onNavigate, showToast, initialView = 'cart' }) {
   const {
@@ -154,9 +155,89 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
     setIsPlacingOrder(true);
 
     try {
+      // 1. Authoritative Validation Against Live Database
+      const { products: liveDbProducts } = await fetchLiveProducts();
+      const liveProductMap = new Map();
+      liveDbProducts.forEach((p) => {
+        liveProductMap.set(String(p.id), p);
+        if (p.product_key) liveProductMap.set(String(p.product_key), p);
+        if (p.name) liveProductMap.set(p.name.toLowerCase().trim(), p);
+      });
+
+      let priceMismatchNoticed = false;
+      let priceNoticeMsg = '';
+      let calculatedTotal = 0;
+      const validatedLineItems = [];
+
+      for (const item of cartItems) {
+        const liveProd = liveProductMap.get(String(item.productId)) ||
+                         liveProductMap.get(String(item.cartItemId).split('__')[0]) ||
+                         liveProductMap.get((item.rawName || item.name).toLowerCase().trim());
+
+        if (liveProd) {
+          // Check Stock Availability
+          if (liveProd.available === false || liveProd.is_available === false) {
+            setIsPlacingOrder(false);
+            if (showToast) {
+              showToast(`"${item.name}" is now out of stock. Please remove it from your cart.`);
+            }
+            setActiveStep('cart');
+            return;
+          }
+
+          // Check Non-Negative / Needs Pricing Guard
+          if (liveProd.price <= 0 || liveProd.needsPricing) {
+            setIsPlacingOrder(false);
+            if (showToast) {
+              showToast(`"${item.name}" requires custom pricing. It cannot be checked out for ₹0.`);
+            }
+            setActiveStep('cart');
+            return;
+          }
+
+          const dbUnitPrice = Number(liveProd.price) || 0;
+          if (item.price !== null && typeof item.price === 'number' && item.price !== dbUnitPrice) {
+            priceMismatchNoticed = true;
+            priceNoticeMsg = `The price of "${item.name}" has been updated by the owner from ₹${item.price} to ₹${dbUnitPrice}.`;
+            item.price = dbUnitPrice;
+          }
+
+          calculatedTotal += dbUnitPrice * item.quantity;
+          validatedLineItems.push({
+            name: item.name,
+            quantity: item.quantity,
+            price: dbUnitPrice
+          });
+        } else {
+          const itemPrice = Number(item.price) || 0;
+          if (itemPrice <= 0) {
+            setIsPlacingOrder(false);
+            if (showToast) {
+              showToast(`"${item.name}" requires custom pricing and cannot be purchased for ₹0.`);
+            }
+            setActiveStep('cart');
+            return;
+          }
+          calculatedTotal += itemPrice * item.quantity;
+          validatedLineItems.push({
+            name: item.name,
+            quantity: item.quantity,
+            price: itemPrice
+          });
+        }
+      }
+
+      // If owner changed the price while customer was in checkout:
+      if (priceMismatchNoticed) {
+        setIsPlacingOrder(false);
+        if (showToast) {
+          showToast(`${priceNoticeMsg} Your order total has been updated. Please review before proceeding.`);
+        }
+        return;
+      }
+
       const orderRef = 'MCH-' + Math.floor(100000 + Math.random() * 900000);
-      const summaryProductNames = cartItems.map((i) => `${i.name} × ${i.quantity}`).join(', ');
-      const calculatedTotal = numericSubtotal > 0 ? numericSubtotal : 0;
+      const summaryProductNames = validatedLineItems.map((i) => `${i.name} × ${i.quantity}`).join(', ');
 
       const resolvedPaymentMethod =
         paymentMethod === 'razorpay'
@@ -191,7 +272,7 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
         console.info('[CartView] RPC note, falling back to direct insert:', rpcEx.message);
       }
 
-      // 2. Fallback to direct Supabase tables insert if RPC is not present
+      // 2. Direct Supabase insert with verified amounts
       if (!createdOrderId) {
         try {
           const { data: orderRow, error: orderErr } = await supabase
@@ -221,12 +302,12 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
           if (!orderErr && orderRow?.id) {
             createdOrderId = orderRow.id;
 
-            // Insert order items line by line
-            const orderLineItems = cartItems.map((item) => ({
+            // Insert verified order items line by line
+            const orderLineItems = validatedLineItems.map((item) => ({
               order_id: createdOrderId,
               product_name: item.name,
               quantity: item.quantity,
-              price: item.price || 0
+              price: item.price
             }));
 
             await supabase.from('order_items').insert(orderLineItems);
