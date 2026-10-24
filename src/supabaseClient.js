@@ -77,10 +77,18 @@ export function createTabStorage(tabId) {
     getItem: (key) => {
       try {
         if (typeof window !== 'undefined' && window.sessionStorage) {
-          return window.sessionStorage.getItem(key);
+          const val = window.sessionStorage.getItem(key);
+          if (val !== null) return val;
         }
       } catch (e) {
         console.warn('[TabStorage] Read error, falling back to in-memory store:', e);
+      }
+      // If reading a transient PKCE code-verifier across tabs (when an email recovery link opens in a new tab):
+      if (key && key.endsWith('-code-verifier')) {
+        try {
+          const pkceFallback = window.localStorage?.getItem('sb_pkce_code_verifier');
+          if (pkceFallback) return pkceFallback;
+        } catch (_) {}
       }
       return memoryStore.get(key) ?? null;
     },
@@ -92,6 +100,14 @@ export function createTabStorage(tabId) {
       } catch (e) {
         console.warn('[TabStorage] Write error, falling back to in-memory store:', e);
       }
+      // If saving a transient PKCE code-verifier, mirror to localStorage so an email recovery link
+      // opened in a new tab can exchange the code for a recovery session.
+      // (Actual auth tokens are NEVER written to localStorage and stay strictly tab-isolated).
+      if (key && key.endsWith('-code-verifier')) {
+        try {
+          window.localStorage?.setItem('sb_pkce_code_verifier', value);
+        } catch (_) {}
+      }
       memoryStore.set(key, value);
     },
     removeItem: (key) => {
@@ -101,6 +117,11 @@ export function createTabStorage(tabId) {
         }
       } catch (e) {
         console.warn('[TabStorage] Remove error:', e);
+      }
+      if (key && key.endsWith('-code-verifier')) {
+        try {
+          window.localStorage?.removeItem('sb_pkce_code_verifier');
+        } catch (_) {}
       }
       memoryStore.delete(key);
     }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { getOrderStatusConfig } from '../services/orderStatus';
 
 export default function OrdersEnquiries({ ordersList, isLoading, onRefresh, onStatusChange }) {
   return (
@@ -73,20 +74,19 @@ export default function OrdersEnquiries({ ordersList, isLoading, onRefresh, onSt
                         onChange={(e) => onStatusChange(ord.id, e.target.value)}
                         style={{
                           background: 'rgba(21, 11, 8, 0.9)',
-                          border: '1px solid var(--border-gold)',
-                          color: ord.status === 'completed' ? '#34d399' : ord.status === 'cancelled' ? '#f87171' : 'var(--gold-300)',
+                          border: `1px solid ${getOrderStatusConfig(ord.status).color}`,
+                          color: getOrderStatusConfig(ord.status).color,
                           padding: '4px 8px',
                           borderRadius: 'var(--radius-sm)',
                           fontSize: '0.78rem',
                           fontWeight: 700,
-                          textTransform: 'uppercase',
                           cursor: 'pointer'
                         }}
                       >
-                        <option value="pending">PENDING</option>
-                        <option value="processing">PROCESSING</option>
-                        <option value="completed">COMPLETED</option>
-                        <option value="cancelled">CANCELLED</option>
+                        <option value="pending">⏳ Pending Acceptance</option>
+                        <option value="processing">⚡ In Production / Processing</option>
+                        <option value="completed">✅ Completed & Delivered</option>
+                        <option value="cancelled">❌ Cancelled</option>
                       </select>
                     </td>
                   </tr>

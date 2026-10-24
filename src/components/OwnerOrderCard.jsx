@@ -6,6 +6,7 @@ import {
   fetchOrderForReceipt,
   formatRupees
 } from '../services/receiptService';
+import { getOrderStatusConfig } from '../services/orderStatus';
 
 export default function OwnerOrderCard({ ord, onStatusChange, onVerifyPayment, actions, currentUser }) {
   const [isProcessingReceipt, setIsProcessingReceipt] = useState(false);
@@ -16,15 +17,7 @@ export default function OwnerOrderCard({ ord, onStatusChange, onVerifyPayment, a
   const formattedDate = ord.created_at ? new Date(ord.created_at).toLocaleDateString() : 'Recent';
   const isPaid = isOrderPaymentVerified(ord);
   const totalAmt = Number(ord.total_amount) || 0;
-
-  const statusColor =
-    ord.status === 'completed'
-      ? '#34d399'
-      : ord.status === 'cancelled'
-      ? '#f87171'
-      : ord.status === 'processing' || ord.status === 'accepted' || ord.status === 'awaiting'
-      ? '#60a5fa'
-      : 'var(--gold-300)';
+  const statusConfig = getOrderStatusConfig(ord.status);
 
   const handleDownload = async () => {
     try {
@@ -110,9 +103,9 @@ export default function OwnerOrderCard({ ord, onStatusChange, onVerifyPayment, a
             <span
               className="badge-tag"
               style={{
-                background: 'rgba(212, 163, 115, 0.15)',
-                border: `1px solid ${statusColor}`,
-                color: statusColor,
+                background: statusConfig.background,
+                border: statusConfig.border,
+                color: statusConfig.color,
                 textTransform: 'uppercase',
                 fontWeight: 700,
                 padding: '3px 10px',
@@ -120,7 +113,7 @@ export default function OwnerOrderCard({ ord, onStatusChange, onVerifyPayment, a
                 fontSize: '0.74rem'
               }}
             >
-              {ord.status || 'pending'}
+              {statusConfig.label}
             </span>
           </div>
 

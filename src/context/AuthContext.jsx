@@ -13,6 +13,16 @@ export function AuthProvider({ children }) {
   const [profileError, setProfileError] = useState(null);
   const [orders, setOrders] = useState([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return window.sessionStorage?.getItem('mch_in_password_recovery') === 'true';
+      } catch (_) {
+        return false;
+      }
+    }
+    return false;
+  });
 
   // Helper to load user profile from public.profiles using auth.uid() / UUID
   const loadUserProfile = async (supabaseAuthUser) => {
@@ -181,11 +191,23 @@ export function AuthProvider({ children }) {
       if (event === 'INITIAL_SESSION') {
         return;
       }
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+        try {
+          window.sessionStorage?.setItem('mch_in_password_recovery', 'true');
+        } catch (_) {}
+        if (session?.user) {
+          await loadUserProfile(session.user);
+        }
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
         if (session?.user) {
           await loadUserProfile(session.user);
         }
       } else if (event === 'SIGNED_OUT') {
+        setIsPasswordRecovery(false);
+        try {
+          window.sessionStorage?.removeItem('mch_in_password_recovery');
+        } catch (_) {}
         setAuthUser(null);
         setProfile(null);
         setRole(null);
@@ -373,6 +395,77 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Real Supabase Auth Forgot Password (Sends recovery email)
+  const requestPasswordReset = async (email) => {
+    const cleanEmail = email ? email.trim().toLowerCase() : '';
+    if (!cleanEmail || !validateEmail(cleanEmail)) {
+      return { success: false, message: 'Please enter a valid email address.' };
+    }
+
+    try {
+      // Construct redirect URL pointing to the dedicated reset password view on current origin
+      const redirectUrl = `${window.location.origin}/#reset-password`;
+
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: redirectUrl
+      });
+
+      if (error) {
+        return { success: false, message: error.message };
+      }
+
+      return {
+        success: true,
+        message: 'If an account exists with this email address, instructions to reset your password have been sent.'
+      };
+    } catch (err) {
+      return {
+        success: false,
+        message: err.message || 'Failed to send password recovery link.'
+      };
+    }
+  };
+
+  // Real Supabase Auth Password Update (Requires active recovery session or logged-in user)
+  const updatePassword = async (newPassword) => {
+    const cleanPass = newPassword || '';
+    if (!cleanPass || cleanPass.length < 6) {
+      return { success: false, message: 'Password must be at least 6 characters.' };
+    }
+
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        password: cleanPass
+      });
+
+      if (error) {
+        return { success: false, message: error.message };
+      }
+
+      if (!data?.user) {
+        return { success: false, message: 'Password update could not be completed. Please try again.' };
+      }
+
+      return {
+        success: true,
+        user: data.user,
+        message: 'Password updated successfully!'
+      };
+    } catch (err) {
+      return {
+        success: false,
+        message: err.message || 'Failed to update password.'
+      };
+    }
+  };
+
+  const clearPasswordRecovery = () => {
+    setIsPasswordRecovery(false);
+    try {
+      window.sessionStorage?.removeItem('mch_in_password_recovery');
+    } catch (_) {}
+  };
+
   // Real Supabase Auth Logout (tab-local scope)
   const logout = async () => {
     try {
@@ -380,6 +473,7 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.warn('[Supabase] SignOut error:', err);
     } finally {
+      clearPasswordRecovery();
       setAuthUser(null);
       setProfile(null);
       setRole(null);
@@ -390,35 +484,36 @@ export function AuthProvider({ children }) {
   const createOrder = (orderData) => {
     const refNumber = 'MCH-' + Math.floor(100000 + Math.random() * 900000);
 
-    // Build database payload
-    const orderPayload = {
-      user_id: user ? user.id : null,
-      order_number: refNumber,
-      customer_name: orderData?.name || (user?.name || 'Customer'),
-      customer_email: orderData?.email || user?.email || null,
-      customer_phone: orderData?.phone || user?.phone || null,
-      occasion: orderData?.occasion || null,
-      product_name: orderData?.product || 'Handcrafted Confectionery',
-      quantity: orderData?.quantity || 'Standard',
-      preferred_date: orderData?.date || null,
-      customisation_details: orderData?.customisation || null,
-      special_message: orderData?.message || null,
-      status: 'pending',
-      total_amount: 0
-    };
+    // Persist to Supabase orders table only for authenticated users (orders.user_id is NOT NULL)
+    if (user?.id) {
+      const orderPayload = {
+        user_id: user.id,
+        order_number: refNumber,
+        customer_name: orderData?.name || (user?.name || 'Customer'),
+        customer_email: orderData?.email || user?.email || null,
+        customer_phone: orderData?.phone || user?.phone || null,
+        occasion: orderData?.occasion || null,
+        product_name: orderData?.product || 'Handcrafted Confectionery',
+        quantity: orderData?.quantity || 'Standard',
+        preferred_date: orderData?.date || null,
+        customisation_details: orderData?.customisation || null,
+        special_message: orderData?.message || null,
+        status: 'pending',
+        total_amount: 0
+      };
 
-    // Persist to Supabase orders table without localStorage fallback
-    supabase
-      .from('orders')
-      .insert(orderPayload)
-      .then(({ error }) => {
-        if (error) {
-          console.error('[Supabase] Failed to persist order to database:', error.message);
-        }
-      })
-      .catch((err) => {
-        console.error('[Supabase] Unexpected error persisting order:', err);
-      });
+      supabase
+        .from('orders')
+        .insert(orderPayload)
+        .then(({ error }) => {
+          if (error) {
+            console.error('[Supabase] Failed to persist order to database:', error.message);
+          }
+        })
+        .catch((err) => {
+          console.error('[Supabase] Unexpected error persisting order:', err);
+        });
+    }
 
     return refNumber;
   };
@@ -444,6 +539,10 @@ export function AuthProvider({ children }) {
       signup,
       verifyOtp,
       resendOtp,
+      requestPasswordReset,
+      updatePassword,
+      isPasswordRecovery,
+      clearPasswordRecovery,
       logout,
       orders,
       createOrder,

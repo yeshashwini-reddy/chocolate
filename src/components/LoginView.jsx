@@ -19,7 +19,7 @@ const DEMO_CREDENTIALS = {
 };
 
 export default function LoginView({ onNavigate, initialTab = 'login' }) {
-  const { user, login, signup, logout } = useAuth();
+  const { user, login, signup, logout, requestPasswordReset } = useAuth();
   const [activeTab, setActiveTab] = useState(initialTab);
   const [showPassword, setShowPassword] = useState(false);
   const [pendingOtpEmail, setPendingOtpEmail] = useState(() => {
@@ -36,6 +36,10 @@ export default function LoginView({ onNavigate, initialTab = 'login' }) {
   const [signupPassword, setSignupPassword] = useState('');
   const [signupConfirm, setSignupConfirm] = useState('');
   const [signupError, setSignupError] = useState('');
+
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotError, setForgotError] = useState('');
+  const [forgotSuccess, setForgotSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -98,6 +102,32 @@ export default function LoginView({ onNavigate, initialTab = 'login' }) {
       const targetEmail = res.email || signupEmail.trim().toLowerCase();
       setPendingOtpEmail(targetEmail);
       sessionStorage.setItem('mch_pending_otp_email', targetEmail);
+    }
+  };
+
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    setForgotError('');
+    setForgotSuccess(false);
+
+    const clean = forgotEmail.trim().toLowerCase();
+    if (!clean) {
+      setForgotError('Please enter your email address.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
+      setForgotError('Please enter a valid email address.');
+      return;
+    }
+
+    setIsLoading(true);
+    const res = await requestPasswordReset(clean);
+    setIsLoading(false);
+
+    if (!res.success) {
+      setForgotError(`⚠️ ${res.message}`);
+    } else {
+      setForgotSuccess(true);
     }
   };
 
@@ -332,32 +362,50 @@ export default function LoginView({ onNavigate, initialTab = 'login' }) {
             ) : (
               <>
                 {/* Auth Tabs (Login / Sign Up) */}
-                <div className="auth-tabs">
-                  <button
-                    type="button"
-                    className={`auth-tab-btn ${activeTab === 'login' ? 'active' : ''}`}
-                    id="tab-btn-login"
-                    onClick={() => {
-                      setActiveTab('login');
-                      setLoginError('');
-                      setSignupError('');
-                    }}
-                  >
-                    Login
-                  </button>
-                  <button
-                    type="button"
-                    className={`auth-tab-btn ${activeTab === 'signup' ? 'active' : ''}`}
-                    id="tab-btn-signup"
-                    onClick={() => {
-                      setActiveTab('signup');
-                      setLoginError('');
-                      setSignupError('');
-                    }}
-                  >
-                    Sign Up
-                  </button>
-                </div>
+                {activeTab === 'forgot' ? (
+                  <div style={{ marginBottom: '20px' }}>
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      style={{ fontSize: '0.8rem', padding: '5px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                      onClick={() => {
+                        setActiveTab('login');
+                        setForgotError('');
+                        setForgotSuccess(false);
+                      }}
+                    >
+                      <span>←</span>
+                      <span>Back to Login</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="auth-tabs">
+                    <button
+                      type="button"
+                      className={`auth-tab-btn ${activeTab === 'login' ? 'active' : ''}`}
+                      id="tab-btn-login"
+                      onClick={() => {
+                        setActiveTab('login');
+                        setLoginError('');
+                        setSignupError('');
+                      }}
+                    >
+                      Login
+                    </button>
+                    <button
+                      type="button"
+                      className={`auth-tab-btn ${activeTab === 'signup' ? 'active' : ''}`}
+                      id="tab-btn-signup"
+                      onClick={() => {
+                        setActiveTab('signup');
+                        setLoginError('');
+                        setSignupError('');
+                      }}
+                    >
+                      Sign Up
+                    </button>
+                  </div>
+                )}
 
                 {/* ==========================================================================
                      LOGIN VIEW
@@ -392,14 +440,20 @@ export default function LoginView({ onNavigate, initialTab = 'login' }) {
                     <div className="form-group" style={{ marginBottom: '24px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                         <label htmlFor="login-password" className="form-label" style={{ marginBottom: 0 }}>Password</label>
-                        <a
-                          href="javascript:void(0)"
+                        <button
+                          type="button"
                           className="auth-link-forgot"
                           id="btn-forgot-pass"
-                          onClick={() => alert('To reset your password, please contact Madhuri directly on WhatsApp or email.')}
+                          style={{ background: 'none', border: 'none', padding: 0 }}
+                          onClick={() => {
+                            setActiveTab('forgot');
+                            setForgotError('');
+                            setForgotSuccess(false);
+                            if (loginEmail) setForgotEmail(loginEmail);
+                          }}
                         >
                           Forgot Password?
-                        </a>
+                        </button>
                       </div>
                       <div className="password-field-wrap">
                         <input
@@ -597,6 +651,113 @@ export default function LoginView({ onNavigate, initialTab = 'login' }) {
                       Login →
                     </span>
                   </div>
+
+                  <a
+                    href="#home"
+                    className="auth-guest-link"
+                    onClick={(e) => handleLink(e, '#home')}
+                  >
+                    ← Return to Homepage
+                  </a>
+                </div>
+
+                {/* ==========================================================================
+                     FORGOT PASSWORD VIEW
+                     ========================================================================== */}
+                <div className={`auth-form-view ${activeTab === 'forgot' ? 'active' : ''}`} id="auth-forgot-view">
+                  <div>
+                    <h1 className="auth-title-large">Reset Password</h1>
+                    <p className="auth-subtitle-text">
+                      Enter your registered email address to receive secure password reset instructions.
+                    </p>
+                  </div>
+
+                  {forgotError && (
+                    <div className="auth-error-msg show" id="forgot-error-msg" style={{ marginBottom: '18px' }}>
+                      {forgotError}
+                    </div>
+                  )}
+
+                  {forgotSuccess ? (
+                    <div
+                      style={{
+                        background: 'rgba(16, 185, 129, 0.12)',
+                        border: '1px solid rgba(52, 211, 153, 0.4)',
+                        borderRadius: 'var(--radius-sm)',
+                        padding: '24px 20px',
+                        textAlign: 'center',
+                        marginBottom: '20px'
+                      }}
+                    >
+                      <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>📬</div>
+                      <h3 style={{ color: '#34d399', fontFamily: 'var(--font-serif)', marginBottom: '8px', fontSize: '1.25rem' }}>
+                        Recovery Link Sent
+                      </h3>
+                      <p style={{ color: 'var(--text-cream)', fontSize: '0.92rem', lineHeight: '1.6', marginBottom: '18px' }}>
+                        If an account is associated with <strong>{forgotEmail}</strong>, we have sent instructions to reset your password. Please check your inbox and spam folder.
+                      </p>
+                      <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          className="btn btn-gold btn-sm"
+                          onClick={() => {
+                            setActiveTab('login');
+                            setForgotSuccess(false);
+                          }}
+                        >
+                          Return to Login
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-sm"
+                          onClick={() => {
+                            setForgotSuccess(false);
+                          }}
+                        >
+                          Send Another Link
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <form id="auth-forgot-form" onSubmit={handleForgotSubmit} noValidate>
+                      <div className="form-group" style={{ marginBottom: '22px' }}>
+                        <label htmlFor="forgot-email" className="form-label">Email Address</label>
+                        <input
+                          type="email"
+                          id="forgot-email"
+                          className="form-control"
+                          placeholder="e.g. yourname@example.com"
+                          value={forgotEmail}
+                          onChange={(e) => setForgotEmail(e.target.value)}
+                          required
+                          disabled={isLoading}
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="btn btn-gold btn-lg login-btn-submit"
+                        style={{ width: '100%', marginBottom: '18px' }}
+                        disabled={isLoading}
+                      >
+                        <span>{isLoading ? 'Sending Reset Link...' : 'Send Reset Link'}</span>
+                        <span className="btn-icon-arrow">→</span>
+                      </button>
+
+                      <div className="auth-footer-prompt">
+                        Remembered your password?{' '}
+                        <span
+                          className="auth-switch-link"
+                          onClick={() => {
+                            setActiveTab('login');
+                            setForgotError('');
+                          }}
+                        >
+                          Back to Login →
+                        </span>
+                      </div>
+                    </form>
+                  )}
 
                   <a
                     href="#home"

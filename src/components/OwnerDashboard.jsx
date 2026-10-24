@@ -2,9 +2,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useProducts } from '../context/ProductContext';
 import { BRAND_CONFIG } from '../config/brandConfig';
-import { supabase } from '../supabaseClient';
+import { supabase, getTabId } from '../supabaseClient';
 import OwnerOrderCard from './OwnerOrderCard';
 import OwnerProductModal from './OwnerProductModal';
+import { getOrderStatusConfig } from '../services/orderStatus';
 import {
   downloadReceiptPdf,
   printReceiptPdf,
@@ -34,6 +35,8 @@ export default function OwnerDashboard({ onNavigate }) {
   const [ordersError, setOrdersError] = useState(null);
   const [fetchNotice, setFetchNotice] = useState(null);
   const [dashboardToast, setDashboardToast] = useState(null);
+  const [updatingOrderId, setUpdatingOrderId] = useState(null);
+  const [statusUpdateError, setStatusUpdateError] = useState(null);
 
   // Modals & Action State
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -123,8 +126,10 @@ export default function OwnerDashboard({ onNavigate }) {
     // Supabase Realtime channel for live order updates
     let channel;
     try {
+      const tabId = getTabId();
+      const channelName = `owner_live_orders_${tabId}_${Date.now()}`;
       channel = supabase
-        .channel('owner_live_orders_feed')
+        .channel(channelName)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'orders' },
@@ -137,16 +142,25 @@ export default function OwnerDashboard({ onNavigate }) {
       console.warn('[OwnerDashboard] Realtime setup note:', e);
     }
 
+    const handleWindowFocus = () => {
+      loadDashboardData();
+    };
+    window.addEventListener('focus', handleWindowFocus);
+
     return () => {
+      window.removeEventListener('focus', handleWindowFocus);
       if (channel) supabase.removeChannel(channel);
     };
   }, []);
 
-  // Update order status in Supabase
+  // Update order status in Supabase (persists first, displays loading, updates UI on success)
   const handleStatusChange = async (orderId, newStatus) => {
-    setOrdersList((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
-    );
+    if (!orderId || !newStatus) return;
+    if (updatingOrderId === orderId) return;
+
+    setUpdatingOrderId(orderId);
+    setStatusUpdateError(null);
+
     try {
       const { error } = await supabase
         .from('orders')
@@ -154,12 +168,23 @@ export default function OwnerDashboard({ onNavigate }) {
         .eq('id', orderId);
 
       if (error) {
+        console.error('[OwnerDashboard] Status update error:', error.message);
+        setStatusUpdateError({ orderId, message: error.message });
         triggerToast(`Status update error: ${error.message}`);
       } else {
-        triggerToast(`Order status updated to "${newStatus}".`);
+        // Update the UI only AFTER the database update succeeds
+        setOrdersList((prev) =>
+          prev.map((o) => (o.id === orderId ? { ...o, status: newStatus, updated_at: new Date().toISOString() } : o))
+        );
+        const statusConfig = getOrderStatusConfig(newStatus);
+        triggerToast(`Order status updated to "${statusConfig.label}".`);
       }
     } catch (err) {
-      triggerToast(`Error updating status: ${err.message}`);
+      console.error('[OwnerDashboard] Status update exception:', err);
+      setStatusUpdateError({ orderId, message: err.message || 'Unknown network error' });
+      triggerToast(`Error updating status: ${err.message || 'Network error'}`);
+    } finally {
+      setUpdatingOrderId(null);
     }
   };
 
@@ -1303,14 +1328,34 @@ export default function OwnerDashboard({ onNavigate }) {
                       <select
                         className="status-select"
                         value={ord.status || 'pending'}
+                        disabled={updatingOrderId === ord.id}
                         onChange={(e) => handleStatusChange(ord.id, e.target.value)}
-                        style={{ padding: '4px 10px' }}
+                        style={{
+                          padding: '5px 10px',
+                          borderRadius: '6px',
+                          background: 'rgba(21, 11, 8, 0.9)',
+                          border: '1px solid var(--border-gold)',
+                          color: 'var(--gold-200)',
+                          cursor: updatingOrderId === ord.id ? 'wait' : 'pointer',
+                          opacity: updatingOrderId === ord.id ? 0.65 : 1
+                        }}
                       >
                         <option value="pending">⏳ Pending Acceptance</option>
                         <option value="processing">⚡ In Production / Processing</option>
                         <option value="completed">✅ Completed & Delivered</option>
                         <option value="cancelled">❌ Cancelled</option>
                       </select>
+                      {updatingOrderId === ord.id && (
+                        <span style={{ fontSize: '0.76rem', color: 'var(--gold-300)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <span>💾</span>
+                          <span>Saving...</span>
+                        </span>
+                      )}
+                      {statusUpdateError?.orderId === ord.id && (
+                        <span style={{ fontSize: '0.75rem', color: '#f87171' }}>
+                          ⚠️ {statusUpdateError.message}
+                        </span>
+                      )}
                     </div>
                   }
                 />

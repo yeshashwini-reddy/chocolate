@@ -21,6 +21,7 @@ import FloatingElements from './components/FloatingElements';
 import OrderConfirmationModal from './components/OrderConfirmationModal';
 import OrderHistoryModal from './components/OrderHistoryModal';
 import LoginView from './components/LoginView';
+import ResetPasswordView from './components/ResetPasswordView';
 import AdminDashboard from './components/AdminDashboard';
 import OwnerDashboard from './components/OwnerDashboard';
 import CartView from './components/CartView';
@@ -43,6 +44,8 @@ const routeViewMap = {
   '#contact': 'view-contact',
   '#login': 'view-login',
   '#signup': 'view-login',
+  '#forgot-password': 'view-login',
+  '#reset-password': 'view-reset-password',
   '#admin': 'view-admin',
   '#owner': 'view-owner'
 };
@@ -71,11 +74,15 @@ export default function App() {
 
   const cleanHash = currentHash.split('?')[0] || '';
   const activeView = routeViewMap[cleanHash] || 'view-home';
-  const initialTab = (currentHash.includes('tab=signup') || cleanHash === '#signup') ? 'signup' : 'login';
+  const initialTab = (currentHash.includes('tab=signup') || cleanHash === '#signup')
+    ? 'signup'
+    : (currentHash.includes('tab=forgot') || cleanHash === '#forgot-password')
+    ? 'forgot'
+    : 'login';
 
-  // Apply auth-page body class when on login/signup page
+  // Apply auth-page body class when on login/signup/reset-password page
   useEffect(() => {
-    if (activeView === 'view-login') {
+    if (activeView === 'view-login' || activeView === 'view-reset-password') {
       document.body.classList.add('auth-page');
     } else {
       document.body.classList.remove('auth-page');
@@ -85,6 +92,21 @@ export default function App() {
     };
   }, [activeView]);
 
+  // Detect recovery callback parameters on initial load
+  useEffect(() => {
+    const rawHash = window.location.hash || '';
+    const rawSearch = window.location.search || '';
+    if (
+      rawHash.includes('type=recovery') ||
+      rawSearch.includes('type=recovery') ||
+      (rawSearch.includes('code=') && (rawHash.includes('reset') || rawSearch.includes('type=recovery')))
+    ) {
+      if (cleanHash !== '#reset-password') {
+        navigateTo('#reset-password');
+      }
+    }
+  }, []);
+
   // Listen to browser hashchange
   useEffect(() => {
     const handleHashChange = () => {
@@ -92,7 +114,9 @@ export default function App() {
       setCurrentHash(newHash);
 
       const target = newHash.split('?')[0];
-      if (['#occasions', '#custom-order', '#gallery', '#how-it-works', '#why-choose-us'].includes(target)) {
+      if (['#orders', '#my-orders', '#order-history'].includes(target)) {
+        setIsOrderHistoryOpen(true);
+      } else if (['#occasions', '#custom-order', '#gallery', '#how-it-works', '#why-choose-us'].includes(target)) {
         setTimeout(() => {
           const el = document.querySelector(target);
           if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -272,6 +296,24 @@ export default function App() {
           onOpenOrderHistory={() => setIsOrderHistoryOpen(true)}
         />
         <LoginView onNavigate={navigateTo} initialTab={initialTab} />
+        <Footer onNavigate={navigateTo} />
+        <FloatingElements toastMessage={toastMessage} />
+      </div>
+    );
+  }
+
+  // Dedicated standalone Reset Password view
+  if (activeView === 'view-reset-password') {
+    return (
+      <div className="app-root">
+        <Header
+          activeView={activeView}
+          onNavigate={navigateTo}
+          onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          isMobileMenuOpen={isMobileMenuOpen}
+          onOpenOrderHistory={() => setIsOrderHistoryOpen(true)}
+        />
+        <ResetPasswordView onNavigate={navigateTo} />
         <Footer onNavigate={navigateTo} />
         <FloatingElements toastMessage={toastMessage} />
       </div>

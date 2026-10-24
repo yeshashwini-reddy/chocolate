@@ -141,8 +141,10 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
     if (isPlacingOrder) return;
     if (!validateCheckout()) return;
 
-    if (!user && !checkoutData.email?.trim()) {
-      if (showToast) showToast('Please provide your email address to receive your order updates 🍫');
+    if (!user?.id) {
+      if (showToast) showToast('Please log in or create an account to place your order 🍫');
+      if (onNavigate) onNavigate('#login');
+      else window.location.hash = '#login';
       return;
     }
 
@@ -278,7 +280,7 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
           const { data: orderRow, error: orderErr } = await supabase
             .from('orders')
             .insert({
-              user_id: user ? user.id : null,
+              user_id: user.id,
               order_number: finalOrderNumber,
               customer_name: checkoutData.name.trim(),
               customer_email: checkoutData.email.trim(),
@@ -299,7 +301,14 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
             .select('id')
             .single();
 
-          if (!orderErr && orderRow?.id) {
+          if (orderErr) {
+            console.error('[CartView] Direct Supabase order insert error:', orderErr.message);
+            if (showToast) showToast(`Failed to place order: ${orderErr.message}`);
+            setIsPlacingOrder(false);
+            return;
+          }
+
+          if (orderRow?.id) {
             createdOrderId = orderRow.id;
 
             // Insert verified order items line by line
@@ -310,15 +319,24 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
               price: item.price
             }));
 
-            await supabase.from('order_items').insert(orderLineItems);
-          } else {
-            console.warn('[CartView] Direct Supabase insert notice:', orderErr?.message);
-            createdOrderId = 'ord-' + Date.now();
+            const { error: itemsErr } = await supabase.from('order_items').insert(orderLineItems);
+            if (itemsErr) {
+              console.error('[CartView] Failed to insert order items:', itemsErr.message);
+            }
           }
         } catch (dbEx) {
-          console.warn('[CartView] Supabase database note:', dbEx?.message);
-          createdOrderId = 'ord-' + Date.now();
+          console.error('[CartView] Supabase database exception:', dbEx);
+          if (showToast) showToast(`Order failed: ${dbEx.message || 'Database error'}`);
+          setIsPlacingOrder(false);
+          return;
         }
+      }
+
+      // Strictly verify that order was saved to database before proceeding
+      if (!createdOrderId) {
+        if (showToast) showToast('Failed to save order to database. Please check your connection and try again.');
+        setIsPlacingOrder(false);
+        return;
       }
 
       // Snapshot ordered items for confirmation screen before clearing cart

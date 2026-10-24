@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../supabaseClient';
+import { supabase, getTabId } from '../supabaseClient';
+import { getOrderStatusConfig } from '../services/orderStatus';
 import {
   downloadReceiptPdf,
   printReceiptPdf,
@@ -54,24 +55,57 @@ export default function OrderHistoryModal({ isOpen, onClose, onNavigate }) {
 
   useEffect(() => {
     if (!isOpen || !user?.id) return;
+
+    // 1. Immediate fetch upon modal open
     loadCustomerOrders();
-  }, [isOpen, user]);
 
-  if (!isOpen) return null;
+    // 2. Realtime subscription strictly filtered to this authenticated customer's orders
+    let channel;
+    try {
+      const tabId = getTabId();
+      const channelName = `customer_orders_${user.id}_${tabId}_${Date.now()}`;
+      channel = supabase
+        .channel(channelName)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'orders',
+            filter: `user_id=eq.${user.id}`
+          },
+          () => {
+            loadCustomerOrders();
+          }
+        )
+        .subscribe();
+    } catch (e) {
+      console.warn('[OrderHistoryModal] Realtime setup note:', e);
+    }
 
-  const statusStyles = {
-    pending: { background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.4)' },
-    processing: { background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.4)' },
-    completed: { background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.4)' },
-    cancelled: { background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.4)' }
-  };
+    // 3. Reliable refresh-on-focus fallback
+    const handleWindowFocus = () => {
+      loadCustomerOrders();
+    };
+    window.addEventListener('focus', handleWindowFocus);
+
+    // 4. Clean up channel subscription and focus listener
+    return () => {
+      window.removeEventListener('focus', handleWindowFocus);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [isOpen, user?.id]);
 
   const handleDownloadReceipt = async (ord) => {
     setActionError(null);
     try {
       setReceiptLoadingId(ord.id || ord.order_number);
-      // Fetch full order snapshot and enforce security authorization
-      const fullOrder = await fetchOrderForReceipt(ord.id || ord.order_number, user);
+      // Use existing verified items if already loaded, or fetch full order snapshot
+      const fullOrder = (ord.order_items && ord.order_items.length > 0)
+        ? { ...ord, items: ord.order_items }
+        : await fetchOrderForReceipt(ord.id || ord.order_number, user);
       await downloadReceiptPdf(fullOrder);
     } catch (err) {
       console.error('[OrderHistoryModal] Document download error:', err);
@@ -85,7 +119,9 @@ export default function OrderHistoryModal({ isOpen, onClose, onNavigate }) {
     setActionError(null);
     try {
       setReceiptLoadingId(ord.id || ord.order_number);
-      const fullOrder = await fetchOrderForReceipt(ord.id || ord.order_number, user);
+      const fullOrder = (ord.order_items && ord.order_items.length > 0)
+        ? { ...ord, items: ord.order_items }
+        : await fetchOrderForReceipt(ord.id || ord.order_number, user);
       await printReceiptPdf(fullOrder);
     } catch (err) {
       console.error('[OrderHistoryModal] Document print error:', err);
@@ -94,6 +130,8 @@ export default function OrderHistoryModal({ isOpen, onClose, onNavigate }) {
       setReceiptLoadingId(null);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div
@@ -121,21 +159,34 @@ export default function OrderHistoryModal({ isOpen, onClose, onNavigate }) {
           <h3 style={{ fontFamily: 'var(--font-serif)', color: 'var(--gold-300)', margin: 0, fontSize: '1.4rem' }}>
             📦 My Order History & Receipts
           </h3>
-          <button
-            type="button"
-            id="close-order-history-modal"
-            className="dialog-close-btn"
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--gold-400)',
-              fontSize: '1.5rem',
-              cursor: 'pointer'
-            }}
-            onClick={onClose}
-          >
-            ✕
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              disabled={isLoading}
+              onClick={loadCustomerOrders}
+              style={{ fontSize: '0.76rem', padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+              title="Refresh your orders from Supabase"
+            >
+              <span>🔄</span>
+              <span>{isLoading ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
+            <button
+              type="button"
+              id="close-order-history-modal"
+              className="dialog-close-btn"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--gold-400)',
+                fontSize: '1.5rem',
+                cursor: 'pointer'
+              }}
+              onClick={onClose}
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {actionError && (
@@ -218,7 +269,7 @@ export default function OrderHistoryModal({ isOpen, onClose, onNavigate }) {
                 const isPaid = isOrderPaymentVerified(ord);
                 const orderKey = ord.id || ord.order_number;
                 const isProcessingThis = receiptLoadingId === orderKey;
-                const statusStyle = statusStyles[ord.status] || statusStyles.pending;
+                const statusConfig = getOrderStatusConfig(ord.status);
                 const formattedDate = ord.created_at
                   ? new Date(ord.created_at).toLocaleDateString('en-IN', {
                       year: 'numeric',
@@ -279,24 +330,59 @@ export default function OrderHistoryModal({ isOpen, onClose, onNavigate }) {
                         {/* Fulfillment Status Badge */}
                         <span
                           style={{
-                            padding: '3px 8px',
+                            padding: '3px 10px',
                             borderRadius: '10px',
                             fontSize: '0.72rem',
                             fontWeight: 700,
                             textTransform: 'uppercase',
-                            ...statusStyle
+                            letterSpacing: '0.3px',
+                            background: statusConfig.background,
+                            color: statusConfig.color,
+                            border: statusConfig.border
                           }}
                         >
-                          {ord.status || 'pending'}
+                          {statusConfig.label}
                         </span>
                       </div>
                     </div>
 
-                    {/* Order Details Body */}
-                    <div style={{ fontSize: '0.88rem', color: 'var(--text-cream)', marginBottom: '4px' }}>
-                      <strong>Items:</strong> {ord.product_name || ord.category || 'Handcrafted Confectionery'}{' '}
-                      {ord.quantity ? `(${ord.quantity})` : ''}
-                    </div>
+                    {/* Granular Line Items from order_items table */}
+                    {Array.isArray(ord.order_items) && ord.order_items.length > 0 ? (
+                      <div style={{ marginBottom: '8px' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '4px', fontWeight: 600 }}>
+                          Order Items ({ord.order_items.length}):
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {ord.order_items.map((item, idx) => (
+                            <div
+                              key={item.id || idx}
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                background: 'rgba(255, 255, 255, 0.03)',
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                fontSize: '0.84rem'
+                              }}
+                            >
+                              <span style={{ color: 'var(--text-cream)' }}>
+                                🍫 {item.product_name}{' '}
+                                <span style={{ color: 'var(--gold-400)', fontWeight: 600 }}>× {item.quantity}</span>
+                              </span>
+                              <span style={{ color: 'var(--gold-200)', fontWeight: 500 }}>
+                                {item.price > 0 ? formatRupees(item.price * item.quantity) : (item.price_tag || '')}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '0.88rem', color: 'var(--text-cream)', marginBottom: '4px' }}>
+                        <strong>Items:</strong> {ord.product_name || ord.category || 'Handcrafted Confectionery'}{' '}
+                        {ord.quantity ? `(${ord.quantity})` : ''}
+                      </div>
+                    )}
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', fontSize: '0.85rem' }}>
                       <span style={{ color: 'var(--text-muted)' }}>
