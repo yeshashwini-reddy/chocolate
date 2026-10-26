@@ -29,16 +29,16 @@ ARG VITE_RAZORPAY_KEY_ID
 ENV VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
 ENV VITE_SUPABASE_PUBLISHABLE_KEY=${VITE_SUPABASE_PUBLISHABLE_KEY}
 ENV VITE_RAZORPAY_KEY_ID=${VITE_RAZORPAY_KEY_ID}
-ENV NODE_ENV=production
 
-# Install dependencies first (leverages Docker layer caching)
+# Install all dependencies (including devDependencies like Vite) needed to build the frontend.
+# We explicitly use --include=dev so build tools are never omitted even if NODE_ENV=production is set.
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --include=dev
 
 # Copy application source code
 COPY . .
 
-# Build the production frontend distribution into /app/dist
+# Build the production frontend distribution into /app/dist (Vite bundles in production mode by default)
 RUN npm run build
 
 # ------------------------------------------------------------------------------
