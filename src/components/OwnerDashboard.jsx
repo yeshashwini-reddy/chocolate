@@ -1516,7 +1516,7 @@ export default function OwnerDashboard({ onNavigate }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ background: 'rgba(21, 11, 8, 0.7)', border: '1px solid var(--border-gold)', borderRadius: 'var(--radius-sm)', padding: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong>owner@test.com</strong>
+                      <strong>Store Owner Account</strong>
                       <span className="badge-tag badge-gold">ROLE: OWNER</span>
                     </div>
                     <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginTop: '4px' }}>
@@ -1526,7 +1526,7 @@ export default function OwnerDashboard({ onNavigate }) {
 
                   <div style={{ background: 'rgba(21, 11, 8, 0.7)', border: '1px solid var(--border-gold)', borderRadius: 'var(--radius-sm)', padding: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong>admin@test.com</strong>
+                      <strong>Store Administrator Account</strong>
                       <span className="badge-tag" style={{ background: 'rgba(96, 165, 250, 0.2)', color: '#60a5fa' }}>ROLE: ADMIN</span>
                     </div>
                     <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginTop: '4px' }}>

@@ -2,26 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import EmailOtpVerification from './EmailOtpVerification';
 
-// Demo account credentials (configurable via Vite environment variables)
-const DEMO_CREDENTIALS = {
-  customer: {
-    email: import.meta.env.VITE_DEMO_CUSTOMER_EMAIL || 'user@test.com',
-    password: import.meta.env.VITE_DEMO_CUSTOMER_PASSWORD || 'password123'
-  },
-  admin: {
-    email: import.meta.env.VITE_DEMO_ADMIN_EMAIL || 'admin@test.com',
-    password: import.meta.env.VITE_DEMO_ADMIN_PASSWORD || 'password123'
-  },
-  owner: {
-    email: import.meta.env.VITE_DEMO_OWNER_EMAIL || 'owner@test.com',
-    password: import.meta.env.VITE_DEMO_OWNER_PASSWORD || 'password123'
-  }
-};
+// Non-privileged demo account credentials for testing/evaluation (only shown when explicitly requested)
+const DEMO_CUSTOMER_EMAIL = import.meta.env.VITE_DEMO_CUSTOMER_EMAIL || 'user@test.com';
+const DEMO_CUSTOMER_PASSWORD = 'password123';
 
 export default function LoginView({ onNavigate, initialTab = 'login' }) {
   const { user, login, signup, logout, requestPasswordReset } = useAuth();
   const [activeTab, setActiveTab] = useState(initialTab);
   const [showPassword, setShowPassword] = useState(false);
+  const [showDemoCredentials, setShowDemoCredentials] = useState(false);
   const [pendingOtpEmail, setPendingOtpEmail] = useState(() => {
     return sessionStorage.getItem('mch_pending_otp_email') || '';
   });
@@ -147,90 +136,7 @@ export default function LoginView({ onNavigate, initialTab = 'login' }) {
     }
   };
 
-  const handleDemoFill = (email, password) => {
-    setLoginEmail(email);
-    setLoginPassword(password);
-    setActiveTab('login');
-    setLoginError('');
-  };
 
-  const handleAdminDemoLogin = async () => {
-    const email = DEMO_CREDENTIALS.admin.email;
-    const password = DEMO_CREDENTIALS.admin.password;
-    setLoginEmail(email);
-    setLoginPassword(password);
-    setActiveTab('login');
-    setLoginError('');
-    setIsLoading(true);
-
-    try {
-      const res = await login(email, password);
-      setIsLoading(false);
-
-      if (!res.success) {
-        if (res.message && res.message.toLowerCase().includes('email not confirmed')) {
-          setLoginError('⚠️ Admin account is not email-confirmed in Supabase. Please confirm it in Supabase.');
-          return;
-        }
-        setLoginError(`⚠️ ${res.message}`);
-        return;
-      }
-
-      const role = res.role || res.user?.role || 'user';
-      if (role === 'owner') {
-        if (onNavigate) onNavigate('#owner');
-        else window.location.hash = '#owner';
-      } else if (role === 'admin') {
-        if (onNavigate) onNavigate('#admin');
-        else window.location.hash = '#admin';
-      } else {
-        if (onNavigate) onNavigate('#home');
-        else window.location.hash = '#home';
-      }
-    } catch (err) {
-      setIsLoading(false);
-      setLoginError(`⚠️ ${err.message || 'Admin login failed.'}`);
-    }
-  };
-
-  const handleOwnerDemoLogin = async () => {
-    const email = DEMO_CREDENTIALS.owner.email;
-    const password = DEMO_CREDENTIALS.owner.password;
-    setLoginEmail(email);
-    setLoginPassword(password);
-    setActiveTab('login');
-    setLoginError('');
-    setIsLoading(true);
-
-    try {
-      const res = await login(email, password);
-      setIsLoading(false);
-
-      if (!res.success) {
-        if (res.message && res.message.toLowerCase().includes('email not confirmed')) {
-          setLoginError('⚠️ Owner account is not email-confirmed in Supabase. Please confirm it in Supabase.');
-          return;
-        }
-        setLoginError(`⚠️ ${res.message}`);
-        return;
-      }
-
-      const role = res.role || res.user?.role || 'user';
-      if (role === 'owner') {
-        if (onNavigate) onNavigate('#owner');
-        else window.location.hash = '#owner';
-      } else if (role === 'admin') {
-        if (onNavigate) onNavigate('#admin');
-        else window.location.hash = '#admin';
-      } else {
-        if (onNavigate) onNavigate('#home');
-        else window.location.hash = '#home';
-      }
-    } catch (err) {
-      setIsLoading(false);
-      setLoginError(`⚠️ ${err.message || 'Owner login failed.'}`);
-    }
-  };
 
   return (
     <main>
@@ -488,50 +394,62 @@ export default function LoginView({ onNavigate, initialTab = 'login' }) {
                     </button>
                   </form>
 
-                  {/* Quick Demo Fill Shortcut */}
-                  <div
-                    style={{
-                      marginTop: '18px',
-                      padding: '10px 12px',
-                      background: 'rgba(212, 163, 115, 0.08)',
-                      border: '1px solid var(--border-gold)',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '0.8rem',
-                      color: 'var(--text-muted)'
-                    }}
-                  >
-                    <div style={{ fontWeight: 600, color: 'var(--gold-300)', marginBottom: '4px' }}>
-                      ⚡ Demo Accounts:
-                    </div>
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
-                      <button
-                        type="button"
-                        className="btn btn-outline btn-sm"
-                        style={{ fontSize: '0.72rem', padding: '2px 8px' }}
-                        onClick={() => handleDemoFill(DEMO_CREDENTIALS.customer.email, DEMO_CREDENTIALS.customer.password)}
-                      >
-                        Customer Demo
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-outline btn-sm"
-                        style={{ fontSize: '0.72rem', padding: '2px 8px' }}
-                        onClick={handleAdminDemoLogin}
-                        disabled={isLoading}
-                      >
-                        Admin Demo
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-outline btn-sm"
-                        style={{ fontSize: '0.72rem', padding: '2px 8px' }}
-                        onClick={handleOwnerDemoLogin}
-                        disabled={isLoading}
-                      >
-                        Owner Demo
-                      </button>
-                    </div>
+                  {/* Optional Demo Credentials Feature (Hidden by default, revealed only upon user request) */}
+                  <div style={{ marginTop: '16px', textAlign: 'center' }}>
+                    <button
+                      type="button"
+                      id="btn-toggle-demo-credentials"
+                      className="btn btn-outline btn-sm"
+                      style={{
+                        fontSize: '0.75rem',
+                        padding: '4px 12px',
+                        color: 'var(--gold-300)',
+                        borderColor: 'rgba(212, 163, 115, 0.35)',
+                        background: 'transparent',
+                        borderRadius: 'var(--radius-sm)',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => setShowDemoCredentials((prev) => !prev)}
+                      aria-expanded={showDemoCredentials}
+                      aria-controls="demo-credentials-section"
+                    >
+                      {showDemoCredentials ? 'Hide Demo Credentials' : 'Show Demo Credentials'}
+                    </button>
                   </div>
+
+                  {/* Revealed Credentials Section (Only visible when explicitly toggled on) */}
+                  {showDemoCredentials && (
+                    <div
+                      id="demo-credentials-section"
+                      style={{
+                        marginTop: '12px',
+                        padding: '12px 14px',
+                        background: 'rgba(212, 163, 115, 0.08)',
+                        border: '1px solid var(--border-gold)',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '0.8rem',
+                        color: 'var(--text-muted)',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <div style={{ fontWeight: 600, color: 'var(--gold-300)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>⚡</span>
+                        <span>Demo Account Credentials:</span>
+                      </div>
+                      <div style={{ background: 'rgba(21, 11, 8, 0.6)', padding: '8px 10px', borderRadius: '4px', border: '1px solid rgba(212, 163, 115, 0.2)' }}>
+                        <div style={{ color: 'var(--gold-200)', fontWeight: 500, fontSize: '0.78rem' }}>Customer Demo (Testing Only)</div>
+                        <div style={{ marginTop: '4px', fontSize: '0.76rem' }}>
+                          Email: <code style={{ color: 'var(--text-cream)' }}>{DEMO_CUSTOMER_EMAIL}</code>
+                        </div>
+                        <div style={{ marginTop: '2px', fontSize: '0.76rem' }}>
+                          Password: <code style={{ color: 'var(--text-cream)' }}>{DEMO_CUSTOMER_PASSWORD}</code>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontStyle: 'italic', marginTop: '6px' }}>
+                        * Privileged administrator & owner access requires verified non-demo credentials and must be entered manually.
+                      </div>
+                    </div>
+                  )}
 
                   <div className="auth-footer-prompt">
                     Don't have an account?{' '}
