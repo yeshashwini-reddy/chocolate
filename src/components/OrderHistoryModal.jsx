@@ -11,6 +11,7 @@ import {
   getPaymentMethodDisplay,
   getPaymentStatusDisplay
 } from '../services/receiptService';
+import { isRazorpayConfigured, openRazorpayCheckout } from '../services/paymentService';
 
 export default function OrderHistoryModal({ isOpen, onClose, onNavigate }) {
   const { user } = useAuth();
@@ -19,6 +20,7 @@ export default function OrderHistoryModal({ isOpen, onClose, onNavigate }) {
   const [fetchError, setFetchError] = useState(null);
   const [receiptLoadingId, setReceiptLoadingId] = useState(null);
   const [actionError, setActionError] = useState(null);
+  const [retryingPaymentId, setRetryingPaymentId] = useState(null);
 
   // Fetch real database orders strictly for the authenticated customer
   const loadCustomerOrders = async () => {
@@ -128,6 +130,97 @@ export default function OrderHistoryModal({ isOpen, onClose, onNavigate }) {
       setActionError(err.message || 'Failed to prepare document for printing.');
     } finally {
       setReceiptLoadingId(null);
+    }
+  };
+
+  const handlePayOnline = async (ord) => {
+    if (!ord?.id || retryingPaymentId) return;
+    setActionError(null);
+    setRetryingPaymentId(ord.id);
+
+    try {
+      const { data: rzpOrderData, error: rzpCreateErr } = await supabase.functions.invoke('create-razorpay-order', {
+        body: {
+          orderId: ord.id,
+          orderNumber: ord.order_number
+        }
+      });
+
+      if (rzpCreateErr || !rzpOrderData?.razorpay_order_id) {
+        let errMsg = rzpOrderData?.error;
+        if (!errMsg && rzpCreateErr?.context) {
+          try {
+            const errJson = await rzpCreateErr.context.json();
+            errMsg = errJson?.error || errJson?.details || errJson?.message;
+          } catch (_) {}
+        }
+        throw new Error(errMsg || rzpCreateErr?.message || 'Failed to initialize payment gateway.');
+      }
+
+      openRazorpayCheckout({
+        orderNumber: ord.order_number,
+        razorpayOrderId: rzpOrderData.razorpay_order_id,
+        amountInRupees: ord.total_amount,
+        customerName: ord.customer_name || user?.name || '',
+        customerEmail: ord.customer_email || user?.email || '',
+        customerPhone: ord.customer_phone || user?.phone || '',
+        onSuccess: async (rzpResponse) => {
+          try {
+            const { data: verifyRes, error: verifyErr } = await supabase.functions.invoke('verify-razorpay-payment', {
+              body: {
+                orderId: ord.id,
+                orderNumber: ord.order_number,
+                razorpay_order_id: rzpResponse.razorpay_order_id,
+                razorpay_payment_id: rzpResponse.razorpay_payment_id,
+                razorpay_signature: rzpResponse.razorpay_signature
+              }
+            });
+
+            if (verifyErr || !verifyRes?.verified) {
+              let vMsg = verifyRes?.error;
+              if (!vMsg && verifyErr?.context) {
+                try {
+                  const vJson = await verifyErr.context.json();
+                  vMsg = vJson?.details ? `${vJson.error}: ${vJson.details}` : (vJson?.error || vJson?.details || vJson?.message);
+                } catch (_) {}
+              }
+              setActionError(vMsg || 'Payment verification is pending server confirmation.');
+            } else {
+              // Optimistically update the specific order state immediately
+              setOrders((prev) =>
+                prev.map((o) =>
+                  (o.id === ord.id || o.order_number === ord.order_number)
+                    ? {
+                        ...o,
+                        payment_status: 'paid',
+                        paid_at: verifyRes.paid_at || new Date().toISOString(),
+                        receipt_number: verifyRes.receipt_number || `RCPT-${ord.order_number}`,
+                        payment_reference: rzpResponse.razorpay_payment_id,
+                        razorpay_payment_id: rzpResponse.razorpay_payment_id,
+                        razorpay_order_id: rzpResponse.razorpay_order_id,
+                      }
+                    : o
+                )
+              );
+              // Re-fetch authoritative database records
+              await loadCustomerOrders();
+            }
+          } catch (verErr) {
+            console.error('[OrderHistoryModal] Payment verification error:', verErr);
+          }
+        },
+        onFailure: (err) => {
+          console.warn('[OrderHistoryModal] Payment not completed:', err);
+        },
+        onDismiss: () => {
+          console.info('[OrderHistoryModal] Payment popup dismissed');
+        }
+      });
+    } catch (err) {
+      console.error('[OrderHistoryModal] Payment retry error:', err);
+      setActionError(err.message || 'Payment initiation failed.');
+    } finally {
+      setRetryingPaymentId(null);
     }
   };
 
@@ -464,7 +557,30 @@ export default function OrderHistoryModal({ isOpen, onClose, onNavigate }) {
                           <span style={{ color: '#f59e0b', fontSize: '0.78rem', fontStyle: 'italic' }}>
                             ⏳ Payment Pending ({getPaymentMethodDisplay(ord)})
                           </span>
-                          <div style={{ display: 'flex', gap: '8px' }}>
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            {Number(ord.total_amount) > 0 &&
+                              (ord.payment_method?.toLowerCase().includes('razorpay') || ord.razorpay_order_id) &&
+                              isRazorpayConfigured() && (
+                                <button
+                                  type="button"
+                                  className="btn btn-gold btn-sm"
+                                  disabled={retryingPaymentId === ord.id}
+                                  onClick={() => handlePayOnline(ord)}
+                                  style={{
+                                    fontSize: '0.76rem',
+                                    padding: '5px 12px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    fontWeight: 700,
+                                    background: 'linear-gradient(135deg, #d4a373 0%, #b3804d 100%)',
+                                    color: '#150b08'
+                                  }}
+                                >
+                                  <span>⚡</span>
+                                  <span>{retryingPaymentId === ord.id ? 'Connecting...' : 'Pay Online (Razorpay)'}</span>
+                                </button>
+                            )}
                             <button
                               type="button"
                               className="btn btn-gold btn-sm"

@@ -31,6 +31,128 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [placedOrderDetails, setPlacedOrderDetails] = useState(null);
   const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
+  const [isInitiatingPayment, setIsInitiatingPayment] = useState(false);
+
+  /**
+   * Secure Razorpay Online Payment Flow:
+   * 1. Creates Razorpay order server-side via create-razorpay-order Edge Function.
+   * 2. Opens Razorpay Checkout modal with the server-generated order ID.
+   * 3. Verifies cryptographic HMAC-SHA256 signature server-side via verify-razorpay-payment.
+   * 4. Updates order confirmation state upon verified success.
+   * 5. Preserves the order safely as Pending if payment is cancelled or abandoned.
+   */
+  const triggerRazorpayPayment = async (orderInfo) => {
+    const orderIdToPay = orderInfo?.orderId || orderInfo?.id;
+    if (!orderIdToPay || isInitiatingPayment) return;
+
+    setIsInitiatingPayment(true);
+    if (showToast) showToast('Connecting to secure payment gateway... 🍫');
+
+    try {
+      const orderNumber = orderInfo.orderNumber || orderInfo.order_number;
+      const { data: rzpOrderData, error: rzpCreateErr } = await supabase.functions.invoke('create-razorpay-order', {
+        body: {
+          orderId: orderIdToPay,
+          orderNumber: orderNumber
+        }
+      });
+
+      if (rzpCreateErr || !rzpOrderData?.razorpay_order_id) {
+        let serverErrorMsg = rzpOrderData?.error;
+        if (!serverErrorMsg && rzpCreateErr?.context) {
+          try {
+            const errJson = await rzpCreateErr.context.json();
+            serverErrorMsg = errJson?.error || errJson?.details || errJson?.message;
+          } catch (_) {
+            try {
+              serverErrorMsg = await rzpCreateErr.context.text();
+            } catch (_) {}
+          }
+        }
+        if (!serverErrorMsg) {
+          serverErrorMsg = rzpCreateErr?.message || 'Unable to open gateway';
+        }
+
+        console.error('[CartView] create-razorpay-order error:', { rzpCreateErr, rzpOrderData, serverErrorMsg });
+        if (showToast) {
+          showToast(
+            `Payment gateway notice: ${serverErrorMsg}. Your order is safely saved as Pending.`
+          );
+        }
+        return;
+      }
+
+      openRazorpayCheckout({
+        orderNumber: orderNumber,
+        razorpayOrderId: rzpOrderData.razorpay_order_id,
+        amountInRupees: orderInfo.totalAmount || orderInfo.total_amount,
+        customerName: orderInfo.customerName || orderInfo.customer_name,
+        customerEmail: orderInfo.customerEmail || orderInfo.customer_email,
+        customerPhone: orderInfo.customerPhone || orderInfo.customer_phone,
+        onSuccess: async (rzpResponse) => {
+          if (showToast) showToast('Payment received! Verifying signature with backend... 🍫');
+          try {
+            const { data: verifyRes, error: verifyErr } = await supabase.functions.invoke('verify-razorpay-payment', {
+              body: {
+                orderId: orderIdToPay,
+                orderNumber: orderNumber,
+                razorpay_order_id: rzpResponse.razorpay_order_id,
+                razorpay_payment_id: rzpResponse.razorpay_payment_id,
+                razorpay_signature: rzpResponse.razorpay_signature
+              }
+            });
+
+            if (verifyErr || !verifyRes?.verified) {
+              let verifyMsg = verifyRes?.error;
+              if (!verifyMsg && verifyErr?.context) {
+                try {
+                  const vErrJson = await verifyErr.context.json();
+                  verifyMsg = vErrJson?.details ? `${vErrJson.error}: ${vErrJson.details}` : (vErrJson?.error || vErrJson?.details || vErrJson?.message);
+                } catch (_) {}
+              }
+              console.warn('[CartView] Backend verification notice:', { verifyErr, verifyRes, verifyMsg });
+              if (showToast) {
+                showToast(`Payment verification notice: ${verifyMsg || 'Pending server reconciliation'}. Order preserved.`);
+              }
+              return;
+            }
+
+            // Only mark as paid upon successful server verification
+            setPlacedOrderDetails((prev) => ({
+              ...prev,
+              paymentStatus: 'paid',
+              payment_status: 'paid',
+              paid_at: verifyRes.paid_at || new Date().toISOString(),
+              receipt_number: verifyRes.receipt_number || `RCPT-${orderNumber}`,
+              payment_reference: rzpResponse.razorpay_payment_id,
+              razorpayPaymentId: rzpResponse.razorpay_payment_id,
+              razorpayOrderId: rzpResponse.razorpay_order_id
+            }));
+            if (showToast) showToast('Payment successfully verified! Your official paid receipt is ready. 📄');
+          } catch (verEx) {
+            console.error('[CartView] Verification exception:', verEx);
+            if (showToast) showToast('Verification network notice. Payment will reconcile automatically via webhook.');
+          }
+        },
+        onFailure: (err) => {
+          console.warn('[CartView] Razorpay payment failure/dismiss:', err);
+          if (showToast) {
+            showToast('Payment was not completed. Your order is safely preserved in Order History.');
+          }
+        },
+        onDismiss: () => {
+          if (showToast) {
+            showToast('Payment window closed. You can retry anytime from Order History.');
+          }
+        }
+      });
+    } catch (err) {
+      console.error('[CartView] Payment gateway error:', err);
+      if (showToast) showToast('Could not initialize payment gateway. Please try again.');
+    } finally {
+      setIsInitiatingPayment(false);
+    }
+  };
 
   const handleDownloadReceipt = async () => {
     if (!placedOrderDetails) return;
@@ -368,51 +490,7 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
 
       // Handle Online Payment via Razorpay if selected and configured
       if (paymentMethod === 'razorpay' && isRazorpayConfigured() && calculatedTotal > 0 && !hasPriceOnRequest) {
-        openRazorpayCheckout({
-          orderNumber: finalOrderNumber,
-          amountInRupees: calculatedTotal,
-          customerName: checkoutData.name.trim(),
-          customerEmail: checkoutData.email.trim(),
-          customerPhone: checkoutData.phone.trim(),
-          onSuccess: async (rzpResponse) => {
-            if (showToast) showToast('Payment received! Verifying with backend... 🍫');
-            try {
-              // Server-side verification via Supabase Edge Function
-              const { data: verifyRes, error: verifyErr } = await supabase.functions.invoke('verify-razorpay-payment', {
-                body: {
-                  orderId: createdOrderId,
-                  razorpay_order_id: rzpResponse.razorpay_order_id,
-                  razorpay_payment_id: rzpResponse.razorpay_payment_id,
-                  razorpay_signature: rzpResponse.razorpay_signature
-                }
-              });
-
-              if (verifyErr || !verifyRes?.verified) {
-                console.warn('[CartView] Backend verification notice:', verifyErr || verifyRes);
-                if (showToast) showToast('Payment confirmation pending backend verification.');
-                return;
-              }
-
-              // Only update UI to 'paid' when server-side verification succeeds!
-              setPlacedOrderDetails((prev) => ({
-                ...prev,
-                paymentStatus: 'paid',
-                payment_status: 'paid',
-                paid_at: new Date().toISOString(),
-                receipt_number: `RCPT-${finalOrderNumber}`,
-                payment_reference: rzpResponse.razorpay_payment_id,
-                razorpayPaymentId: rzpResponse.razorpay_payment_id
-              }));
-              if (showToast) showToast('Payment verified! Your receipt is now available. 📄');
-            } catch (err) {
-              console.error('[CartView] Verification call exception:', err);
-            }
-          },
-          onFailure: (err) => {
-            console.warn('[CartView] Payment gateway notice:', err);
-            if (showToast) showToast('Online payment not completed. Order preserved as Pending Payment.');
-          }
-        });
+        triggerRazorpayPayment(orderConfirmation);
       }
 
       setActiveStep('confirmation');
@@ -605,10 +683,34 @@ export default function CartView({ onNavigate, showToast, initialView = 'cart' }
                     Your order is confirmed and scheduled for handcrafted preparation. Payment ({placedOrderDetails.totalAmount > 0 ? `₹${placedOrderDetails.totalAmount.toLocaleString('en-IN')}` : 'Quotation Basis'}) is due upon {placedOrderDetails.deliveryType === 'pickup' ? 'studio collection' : 'doorstep delivery'}. You can download your official Order Confirmation document now.
                   </p>
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                    {placedOrderDetails.totalAmount > 0 &&
+                      (placedOrderDetails.paymentMethod?.toLowerCase().includes('razorpay') ||
+                       placedOrderDetails.payment_method?.toLowerCase().includes('razorpay')) &&
+                      isRazorpayConfigured() && (
+                        <button
+                          type="button"
+                          id="btn-retry-online-payment"
+                          className="btn btn-gold btn-sm"
+                          disabled={isInitiatingPayment}
+                          onClick={() => triggerRazorpayPayment(placedOrderDetails)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '10px 22px',
+                            fontWeight: 700,
+                            background: 'linear-gradient(135deg, #d4a373 0%, #b3804d 100%)',
+                            boxShadow: '0 4px 15px rgba(212, 163, 115, 0.35)'
+                          }}
+                        >
+                          <span>⚡</span>
+                          <span>{isInitiatingPayment ? 'Opening Gateway...' : 'Pay Online Now (Razorpay)'}</span>
+                        </button>
+                    )}
                     <button
                       type="button"
                       id="btn-download-receipt"
-                      className="btn btn-gold btn-sm"
+                      className="btn btn-outline btn-sm"
                       disabled={isGeneratingReceipt}
                       onClick={handleDownloadReceipt}
                       style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontWeight: 600 }}

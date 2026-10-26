@@ -265,13 +265,32 @@ export default function OwnerOrderCard({ ord, onStatusChange, onVerifyPayment, a
       >
         <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
           {isPaid ? (
-            <span style={{ color: '#34d399', fontWeight: 600 }}>
-              ✓ Verified Paid Receipt (Receipt #: {ord.receipt_number || `RCPT-${refId}`})
-            </span>
+            <div>
+              <span style={{ color: '#34d399', fontWeight: 600 }}>
+                ✓ Verified Paid Receipt (Receipt #: {ord.receipt_number || `RCPT-${refId}`})
+              </span>
+              {(ord.payment_reference || ord.razorpay_payment_id) && (
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', marginTop: '3px' }}>
+                  Gateway Ref: <code style={{ color: 'var(--gold-300)', background: 'rgba(0,0,0,0.3)', padding: '1px 5px', borderRadius: '3px' }}>{ord.payment_reference || ord.razorpay_payment_id}</code>
+                  {ord.paid_at && (
+                    <span style={{ marginLeft: '8px' }}>
+                      • Paid: {new Date(ord.paid_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           ) : (
-            <span>
-              Payment Method: <strong>{ord.payment_method || 'Cash on Delivery / Direct'}</strong> (Unsettled)
-            </span>
+            <div>
+              <span>
+                Payment Method: <strong>{ord.payment_method || 'Cash on Delivery / Direct'}</strong> (Unsettled)
+              </span>
+              {ord.razorpay_order_id && (
+                <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)', marginTop: '3px' }}>
+                  Razorpay Order ID: <code style={{ color: 'var(--gold-400)', background: 'rgba(0,0,0,0.3)', padding: '1px 5px', borderRadius: '3px' }}>{ord.razorpay_order_id}</code> (Awaiting customer payment)
+                </div>
+              )}
+            </div>
           )}
         </div>
 

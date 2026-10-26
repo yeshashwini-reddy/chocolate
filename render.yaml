@@ -1,0 +1,27 @@
+# ==============================================================================
+# MADHURI'S CHOCO HEAVEN - RENDER BLUEPRINT CONFIGURATION
+# ==============================================================================
+#
+# Connect this repository to Render to automatically provision a full-stack
+# Docker-based Web Service with zero-downtime health probes and automatic
+# deployments on git push.
+# ==============================================================================
+
+services:
+  - type: web
+    name: madhuris-choco-heaven
+    runtime: docker
+    plan: free
+    region: oregon
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /healthz
+    envVars:
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: VITE_RAZORPAY_KEY_ID
+        sync: false
+      - key: NODE_ENV
+        value: production

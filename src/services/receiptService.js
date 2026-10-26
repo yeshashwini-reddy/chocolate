@@ -175,9 +175,16 @@ export async function generateReceiptPdf(orderData) {
   const customerPhone = orderData.customer_phone || orderData.customerPhone || '—';
   const isPickup = (orderData.delivery_type || orderData.deliveryType || 'delivery') === 'pickup';
   const deliveryType = isPickup ? 'Studio Self-Pickup' : 'Doorstep Delivery';
-  const deliveryAddress = isPickup
-    ? 'Madhuri’s Choco Heaven Studio (Self-Pickup)'
-    : (orderData.delivery_address || orderData.deliveryAddress || 'Delivery Address Provided');
+  const rawAddress = (orderData.delivery_address ?? orderData.deliveryAddress ?? '').toString().trim();
+  let deliveryAddress = '';
+  if (isPickup) {
+    deliveryAddress = 'Madhuri’s Choco Heaven Studio (Self-Pickup)';
+  } else if (rawAddress.length > 0) {
+    deliveryAddress = rawAddress;
+  } else {
+    deliveryAddress = 'Address not provided';
+  }
+
   const occasion = orderData.occasion || 'Special Celebration';
   const preferredDate = orderData.preferred_date || orderData.preferredDate || 'As confirmed with studio';
   const paymentRef = orderData.razorpay_payment_id || orderData.payment_reference || orderData.paymentReference || (isPaid ? 'VERIFIED-GATEWAY-TXN' : 'PAYMENT-PENDING');
@@ -223,7 +230,7 @@ export async function generateReceiptPdf(orderData) {
     ];
   }
 
-  // Calculate Subtotal and check if any items exist
+  // Calculate Subtotal and final total dynamically from order data
   const calculatedSubtotal = lineItems.reduce((acc, curr) => acc + curr.subtotal, 0);
   const finalTotal = totalAmount > 0 ? totalAmount : calculatedSubtotal;
 
@@ -249,9 +256,9 @@ export async function generateReceiptPdf(orderData) {
 
   let currentY = margin;
 
-  // 1. HEADER SECTION: BRANDING & CONTACT
+  // 1. HEADER SECTION: BRANDING & CONTACT (ZONED LAYOUT - PREVENTS OVERLAP)
   const logoDataUrl = await getBrandLogoDataUrl();
-  const logoSize = 22; // 22mm x 22mm
+  const logoSize = 20; // 20mm x 20mm
 
   if (logoDataUrl) {
     try {
@@ -263,56 +270,56 @@ export async function generateReceiptPdf(orderData) {
 
   const textStartX = logoDataUrl ? margin + logoSize + 4 : margin;
 
-  // Business Name
+  // Left Header Zone: Brand Identity & Studio Contact (Constrained to x <= 118mm)
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(15);
+  doc.setFontSize(13.5);
   doc.setTextColor(...COLOR_CHOCOLATE);
-  doc.text("MADHURI'S CHOCO HEAVEN", textStartX, currentY + 5);
+  doc.text("MADHURI'S CHOCO HEAVEN", textStartX, currentY + 4.5);
 
-  // Business Tagline
   doc.setFont('helvetica', 'italic');
-  doc.setFontSize(8.5);
+  doc.setFontSize(7.5);
   doc.setTextColor(...COLOR_GOLD);
-  doc.text('Handcrafted Homemade Chocolates, Cakes & Customised Treats', textStartX, currentY + 9.5);
+  doc.text('Handcrafted Homemade Chocolates & Treats', textStartX, currentY + 8.5);
 
-  // Business Details & Contact
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
+  doc.setFontSize(7.2);
   doc.setTextColor(...COLOR_MUTED);
-  doc.text(`Studio: ${BRAND_CONFIG.contact.location || 'Home Boutique Studio'}`, textStartX, currentY + 14);
-  doc.text(`Website: madhuricollective.com  |  Email: ${BRAND_CONFIG.contact.email}  |  Phone: ${BRAND_CONFIG.contact.phoneNumber}`, textStartX, currentY + 18);
+  doc.text('Home Boutique Studio • Hyderabad', textStartX, currentY + 12.5);
+  doc.text(`Phone: ${BRAND_CONFIG.contact.phoneNumber}`, textStartX, currentY + 16.5);
+  doc.text(`Email: ${BRAND_CONFIG.contact.email}  |  madhuricollective.com`, textStartX, currentY + 20.5);
 
-  // Right Header: Document Title (Accurately distinguishes Paid Receipt vs Pending Order Confirmation)
+  // Right Header Zone: Document Title & Identifiers (Strictly aligned right at pageWidth - margin)
   const documentTitle = isPaid ? 'PAYMENT RECEIPT' : 'ORDER CONFIRMATION';
   const subtitleDoc = isPaid ? `Receipt #: ${receiptNumber}` : `Confirmation #: ${receiptNumber}`;
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(isPaid ? 18 : 14.5);
+  doc.setFontSize(isPaid ? 15 : 13);
   doc.setTextColor(isPaid ? COLOR_GOLD[0] : COLOR_CHOCOLATE[0], isPaid ? COLOR_GOLD[1] : COLOR_CHOCOLATE[1], isPaid ? COLOR_GOLD[2] : COLOR_CHOCOLATE[2]);
-  doc.text(documentTitle, pageWidth - margin, currentY + 6, { align: 'right' });
+  doc.text(documentTitle, pageWidth - margin, currentY + 5, { align: 'right' });
 
   if (!isPaid) {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
+    doc.setFontSize(7.5);
     doc.setTextColor(...COLOR_PENDING);
-    doc.text('PAYMENT PENDING', pageWidth - margin, currentY + 10, { align: 'right' });
+    doc.text('PAYMENT PENDING', pageWidth - margin, currentY + 9, { align: 'right' });
   }
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
+  doc.setFontSize(8);
   doc.setTextColor(...COLOR_CHOCOLATE);
-  doc.text(subtitleDoc, pageWidth - margin, currentY + (isPaid ? 12 : 14), { align: 'right' });
+  doc.text(subtitleDoc, pageWidth - margin, currentY + (isPaid ? 10.5 : 13.5), { align: 'right' });
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(...COLOR_MUTED);
-  doc.text(`Date: ${formattedOrderDate}`, pageWidth - margin, currentY + (isPaid ? 16.5 : 18), { align: 'right' });
+  doc.text(`Order Ref: ${orderNumber}`, pageWidth - margin, currentY + (isPaid ? 14.5 : 17.5), { align: 'right' });
+  doc.text(`Date: ${formattedOrderDate}`, pageWidth - margin, currentY + (isPaid ? 18.5 : 21.5), { align: 'right' });
 
-  currentY += 24;
+  currentY += 25;
 
   // Decorative Gold Separator
   doc.setDrawColor(...COLOR_GOLD);
-  doc.setLineWidth(0.6);
+  doc.setLineWidth(0.5);
   doc.line(margin, currentY, pageWidth - margin, currentY);
 
   currentY += 5;
@@ -357,8 +364,18 @@ export async function generateReceiptPdf(orderData) {
   currentY += isPaid ? 16 : 17;
 
   // 3. TWO-COLUMN METADATA BOXES (Customer Details & Order Details)
-  const boxWidth = (contentWidth - 6) / 2;
-  const boxHeight = 32;
+  // Dynamic height calculation so complete address is displayed without truncation
+  const boxWidth = (contentWidth - 6) / 2; // ~88mm
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  const addressLines = doc.splitTextToSize(`Address: ${deliveryAddress}`, boxWidth - 8);
+
+  // Base lines: Header (5.5mm), Name (5mm), Phone (4.5mm), Email (4mm) = 19mm
+  // Plus addressLines: ~3.8mm per line, plus bottom padding (4mm)
+  const customerBoxHeight = 20 + (addressLines.length * 3.8) + 4;
+  const orderBoxHeight = 32;
+  const boxHeight = Math.max(customerBoxHeight, orderBoxHeight, 32);
 
   // Left Card: Customer & Delivery Information
   doc.setFillColor(...COLOR_CREAM_BG);
@@ -369,7 +386,7 @@ export async function generateReceiptPdf(orderData) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
   doc.setTextColor(...COLOR_GOLD);
-  doc.text('BILLED & DELIVERED TO:', margin + 4, currentY + 5.5);
+  doc.text(isPickup ? 'COLLECTED BY / CUSTOMER:' : 'BILLED & DELIVERED TO:', margin + 4, currentY + 5.5);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
@@ -382,8 +399,9 @@ export async function generateReceiptPdf(orderData) {
   doc.text(`Phone: ${customerPhone}`, margin + 4, currentY + 15);
   doc.text(`Email: ${customerEmail}`, margin + 4, currentY + 19);
 
-  const cleanAddress = doc.splitTextToSize(`Address: ${deliveryAddress}`, boxWidth - 8);
-  doc.text(cleanAddress.slice(0, 2), margin + 4, currentY + 23);
+  // Complete address displayed (no slicing, no truncation)
+  doc.setTextColor(...COLOR_MUTED);
+  doc.text(addressLines, margin + 4, currentY + 23);
 
   // Right Card: Order Metadata
   const rightBoxX = margin + boxWidth + 6;
@@ -470,17 +488,19 @@ export async function generateReceiptPdf(orderData) {
   }
 
   // 5. PRICE BREAKDOWN & FINANCIAL SUMMARY BLOCK
-  const summaryBoxWidth = 88;
+  const summaryBoxWidth = 92;
   const summaryX = pageWidth - margin - summaryBoxWidth;
-  const rowH = 5.2;
+  const rowH = 5.5;
+  const summaryBoxHeight = 31;
 
   doc.setFillColor(...COLOR_CREAM_BG);
   doc.setDrawColor(...COLOR_GOLD);
   doc.setLineWidth(0.4);
-  doc.roundedRect(summaryX, currentY, summaryBoxWidth, 29, 1.5, 1.5, 'FD');
+  doc.roundedRect(summaryX, currentY, summaryBoxWidth, summaryBoxHeight, 1.5, 1.5, 'FD');
 
   let sumY = currentY + 5.5;
 
+  // Row 1: Subtotal
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(...COLOR_MUTED);
@@ -488,12 +508,14 @@ export async function generateReceiptPdf(orderData) {
   doc.setTextColor(...COLOR_CHOCOLATE);
   doc.text(formatRupees(finalTotal), summaryX + summaryBoxWidth - 4, sumY, { align: 'right' });
 
+  // Row 2: Delivery/Pickup Fee
   sumY += rowH;
   doc.setTextColor(...COLOR_MUTED);
-  doc.text('Delivery / Pickup Fee:', summaryX + 4, sumY);
+  doc.text('Delivery/Pickup Fee:', summaryX + 4, sumY);
   doc.setTextColor(...COLOR_SUCCESS);
   doc.text('Complimentary (Free)', summaryX + summaryBoxWidth - 4, sumY, { align: 'right' });
 
+  // Row 3: Total Paid / Total Payable
   sumY += rowH;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9.5);
@@ -502,15 +524,16 @@ export async function generateReceiptPdf(orderData) {
   doc.setTextColor(...COLOR_GOLD);
   doc.text(formatRupees(finalTotal), summaryX + summaryBoxWidth - 4, sumY, { align: 'right' });
 
+  // Row 4: Amount Due
   sumY += rowH + 0.5;
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.8);
+  doc.setFontSize(8);
   doc.setTextColor(...COLOR_MUTED);
-  doc.text('Payment Status:', summaryX + 4, sumY);
+  doc.text('Amount Due:', summaryX + 4, sumY);
   doc.setFont('helvetica', 'bold');
   if (isPaid) {
     doc.setTextColor(...COLOR_SUCCESS);
-    doc.text('Rs. 0.00 (Fully Settled)', summaryX + summaryBoxWidth - 4, sumY, { align: 'right' });
+    doc.text('Rs. 0.00 (Fully Paid)', summaryX + summaryBoxWidth - 4, sumY, { align: 'right' });
   } else {
     doc.setTextColor(...COLOR_PENDING);
     doc.text(`${formatRupees(finalTotal)} (Due on ${isPickup ? 'Pickup' : 'Delivery'})`, summaryX + summaryBoxWidth - 4, sumY, { align: 'right' });
@@ -521,7 +544,7 @@ export async function generateReceiptPdf(orderData) {
   doc.setFillColor(254, 252, 248);
   doc.setDrawColor(228, 218, 206);
   doc.setLineWidth(0.3);
-  doc.roundedRect(margin, currentY, noteWidth, 29, 1.5, 1.5, 'FD');
+  doc.roundedRect(margin, currentY, noteWidth, summaryBoxHeight, 1.5, 1.5, 'FD');
 
   if (isPaid) {
     doc.setFont('helvetica', 'bold');

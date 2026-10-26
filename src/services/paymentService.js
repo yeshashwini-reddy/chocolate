@@ -56,6 +56,7 @@ export function loadRazorpayScript() {
  */
 export async function openRazorpayCheckout({
   orderNumber,
+  razorpayOrderId,
   amountInRupees,
   customerName,
   customerEmail,
@@ -89,6 +90,7 @@ export async function openRazorpayCheckout({
     name: "Madhuri's Choco Heaven",
     description: `Order ${orderNumber} - Handcrafted Chocolates & Bakes`,
     image: '/assets/images/logo.png',
+    order_id: razorpayOrderId || undefined,
     handler: function (response) {
       // response contains razorpay_payment_id, razorpay_order_id, razorpay_signature
       if (onSuccess) {

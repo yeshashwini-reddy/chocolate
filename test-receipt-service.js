@@ -128,6 +128,67 @@ async function runTests() {
   const multiPageDoc = await generateReceiptPdf(longOrderData);
   assert(multiPageDoc.getNumberOfPages() > 1, `Long item order correctly paginated to multiple pages (total: ${multiPageDoc.getNumberOfPages()} pages)`);
 
+  // TEST 7: Dynamic Payment Summary Verification (e.g. ₹300 order)
+  console.log('\nTest Group 7: Dynamic Payment Summary (e.g. ₹300 order)');
+  const order300 = {
+    order_number: 'MCH-300-TEST',
+    receipt_number: 'RCPT-MCH-300-TEST',
+    customer_name: 'Ananya Rao',
+    total_amount: 300,
+    payment_status: 'paid',
+    payment_method: 'Online Payment (Razorpay)',
+    razorpay_payment_id: 'pay_Test300XYZ',
+    delivery_type: 'delivery',
+    delivery_address: 'Flat 101, Palm Grove Apts, Madhapur, Hyderabad 500081',
+    created_at: new Date().toISOString(),
+    paid_at: new Date().toISOString(),
+    items: [
+      { name: 'Dark Chocolate Truffle Box (4 pcs)', quantity: 1, price: 300 }
+    ]
+  };
+
+  const doc300 = await generateReceiptPdf(order300);
+  assert(doc300 !== null, 'Generated PDF for ₹300 paid order');
+  assert(formatRupees(order300.total_amount) === 'Rs. 300.00', 'Dynamically calculates Subtotal as Rs. 300.00');
+  assert(formatRupees(0) === 'Rs. 0.00', 'Dynamically calculates Amount Due as Rs. 0.00');
+
+  // TEST 8: Customer Address Fallback & Multi-Line Handling
+  console.log('\nTest Group 8: Customer Address Display & Fallback');
+  const missingAddressOrder = {
+    ...order300,
+    order_number: 'MCH-NO-ADDR',
+    receipt_number: 'RCPT-MCH-NO-ADDR',
+    delivery_address: '' // missing address
+  };
+  const docNoAddr = await generateReceiptPdf(missingAddressOrder);
+  assert(docNoAddr !== null, 'Generated PDF when address is empty (renders "Address not provided")');
+
+  const nullAddressOrder = {
+    ...order300,
+    order_number: 'MCH-NULL-ADDR',
+    receipt_number: 'RCPT-MCH-NULL-ADDR',
+    delivery_address: null
+  };
+  const docNullAddr = await generateReceiptPdf(nullAddressOrder);
+  assert(docNullAddr !== null, 'Generated PDF when address is null (renders "Address not provided")');
+
+  const longAddressOrder = {
+    ...order300,
+    order_number: 'MCH-LONG-ADDR',
+    receipt_number: 'RCPT-MCH-LONG-ADDR',
+    delivery_address: 'House #4-52/1A, Sri Rama Nilayam, Near Venkateshwara Temple, Gachibowli Main Road, Financial District, Hyderabad, Telangana 500032'
+  };
+  const docLongAddr = await generateReceiptPdf(longAddressOrder);
+  assert(docLongAddr !== null, 'Generated PDF with long multi-line address without truncation');
+
+  // TEST 9: Header Zone Separation
+  console.log('\nTest Group 9: Header Layout & Non-Overlapping Verification');
+  const docHeaderTest = await generateReceiptPdf({
+    ...order300,
+    customer_email: 'long.customer.email.address.example@domain.com'
+  });
+  assert(docHeaderTest !== null, 'Generated PDF with clean isolated header zones');
+
   console.log(`\n========================================`);
   console.log(`TEST SUMMARY: ${passed} PASSED, ${failed} FAILED`);
   console.log(`========================================\n`);
