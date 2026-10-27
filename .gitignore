@@ -1,8 +1,15 @@
-node_modules
-dist
+# Dependencies and build output
+
+node_modules/
+dist/
 .DS_Store
+
+# Environment files and secrets
+
 .env
-.env.local
+.env.*
+!.env.example
+
+# Local admin tools
+
 src/admin-tools/
-
-
